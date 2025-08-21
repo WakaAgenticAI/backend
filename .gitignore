@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Virtual envs
+.venv/
+venv/
+.env
+.env.*
+.python-version
+
+# Coverage / Testing
+.coverage*
+htmlcov/
+.pytest_cache/
+
+# Linters / Type checkers
+.mypy_cache/
+.ruff_cache/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Logs
+*.log
+
+# Local data / secrets (adjust as needed)
+backendPRD.md
+WakaAgent AI.pdf
+
+# Alembic versions (uncomment if generated later)
+# alembic/versions/
