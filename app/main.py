@@ -12,7 +12,9 @@ from app.models.users import User
 from app.models.roles import Role, UserRole
 from app.core.logging import setup_json_logging
 from app.realtime.server import Realtime
-from app.models.inventory import Warehouse
+from app.models.inventory import Warehouse, Inventory
+from app.models.products import Product
+from app.core.middleware import RequestIDMiddleware, SimpleRateLimitMiddleware
 
 
 @asynccontextmanager
@@ -22,8 +24,11 @@ async def lifespan(app: FastAPI):
     # Initialize orchestrator and register domain agents
     app.state.orchestrator = Orchestrator()
     app.state.orchestrator.register(OrdersAgent())
-    # Initialize realtime (stubbed)
-    app.state.realtime = Realtime()
+    # Initialize realtime (Socket.IO) with optional Redis manager
+    settings = get_settings()
+    app.state.realtime = Realtime(redis_url=settings.REDIS_URL)
+    # Attach Socket.IO ASGI app to FastAPI
+    app.state.realtime.attach_to(app)
 
     # Seed roles and an admin user (idempotent)
     db = SessionLocal()
@@ -59,10 +64,35 @@ async def lifespan(app: FastAPI):
             db.commit()
 
         # Warehouses: ensure a default exists
-        has_wh = db.query(Warehouse).first()
-        if not has_wh:
-            db.add(Warehouse(name="Main"))
+        warehouse = db.query(Warehouse).first()
+        if not warehouse:
+            warehouse = Warehouse(name="Main")
+            db.add(warehouse)
             db.commit()
+            db.refresh(warehouse)
+
+        # Seed minimal products if none exist
+        if db.query(Product).count() == 0:
+            seed_products = [
+                {"sku": "SKU-APPLE", "name": "Apple", "unit": "unit", "price_ngn": 200, "tax_rate": 7.5},
+                {"sku": "SKU-BREAD", "name": "Bread", "unit": "unit", "price_ngn": 850, "tax_rate": 0},
+                {"sku": "SKU-MILK", "name": "Milk", "unit": "ltr", "price_ngn": 1200, "tax_rate": 7.5},
+            ]
+            for p in seed_products:
+                db.add(Product(**p))
+            db.commit()
+
+        # Ensure initial inventory rows for default warehouse
+        prods = db.query(Product).all()
+        for p in prods:
+            inv = (
+                db.query(Inventory)
+                .filter(Inventory.product_id == p.id, Inventory.warehouse_id == warehouse.id)
+                .first()
+            )
+            if not inv:
+                db.add(Inventory(product_id=p.id, warehouse_id=warehouse.id, on_hand=100, reserved=0))
+        db.commit()
     finally:
         db.close()
     yield
@@ -89,6 +119,10 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    # Middlewares
+    app.add_middleware(RequestIDMiddleware)
+    app.add_middleware(SimpleRateLimitMiddleware, max_requests=100, window_seconds=60)
 
     # Routes
     app.include_router(api_router, prefix=settings.API_V1_PREFIX)
