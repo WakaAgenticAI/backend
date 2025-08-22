@@ -143,3 +143,43 @@ def assign_role(user_id: int, body: AssignRoleIn, db: Session = Depends(get_db))
     db.add(UserRole(user_id=user.id, role_id=role.id))
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get(
+    "/users/{user_id}/roles",
+    response_model=list[RoleOut],
+    dependencies=[Depends(require_roles("Admin"))],
+)
+def list_user_roles(user_id: int, db: Session = Depends(get_db)) -> list[RoleOut]:
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    rows = (
+        db.query(Role)
+        .join(UserRole, UserRole.role_id == Role.id)
+        .filter(UserRole.user_id == user.id)
+        .order_by(Role.name.asc())
+        .all()
+    )
+    return [RoleOut(id=r.id, name=r.name) for r in rows]
+
+
+@router.delete(
+    "/users/{user_id}/roles",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_roles("Admin"))],
+    response_class=Response,
+)
+def remove_role(user_id: int, body: AssignRoleIn, db: Session = Depends(get_db)) -> Response:
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    role = db.query(Role).filter(Role.name == body.role_name).first()
+    if not role:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
+    link = db.query(UserRole).filter(UserRole.user_id == user.id, UserRole.role_id == role.id).first()
+    if not link:
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    db.delete(link)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

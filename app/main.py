@@ -41,7 +41,14 @@ async def lifespan(app: FastAPI):
     db = SessionLocal()
     try:
         # Roles
-        default_roles = ["Admin", "Sales", "Ops", "Finance"]
+        default_roles = [
+            "Admin",
+            "Sales",
+            "Ops",
+            "Finance",
+            "Sales Representative",
+            "Stock Keeper",
+        ]
         existing = {r.name for r in db.query(Role).all()}
         for name in default_roles:
             if name not in existing:
