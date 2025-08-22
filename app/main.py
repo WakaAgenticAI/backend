@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
-from app.api.router import api_router
+from app.api.router import get_api_router
 from app.agents.orchestrator import Orchestrator
 from app.agents.orders_agent import OrdersAgent
 from app.agents.orders_lookup_agent import OrdersLookupAgent
@@ -132,7 +132,7 @@ def create_app() -> FastAPI:
     app.add_middleware(SimpleRateLimitMiddleware, max_requests=100, window_seconds=60)
 
     # Routes
-    app.include_router(api_router, prefix=settings.API_V1_PREFIX)
+    app.include_router(get_api_router(), prefix=settings.API_V1_PREFIX)
 
     return app
 

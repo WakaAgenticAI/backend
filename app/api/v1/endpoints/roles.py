@@ -1,5 +1,5 @@
 from __future__ import annotations
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -28,8 +28,109 @@ def create_role(body: RoleIn, db: Session = Depends(get_db)) -> RoleOut:
     return RoleOut(id=r.id, name=r.name)
 
 
-@router.post("/users/{user_id}/roles", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_roles("Admin"))])
-def assign_role(user_id: int, body: AssignRoleIn, db: Session = Depends(get_db)) -> None:
+@router.post(
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+"/users/{user_id}/roles",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_roles("Admin"))],
+    response_class=Response,
+)
+def assign_role(user_id: int, body: AssignRoleIn, db: Session = Depends(get_db)) -> Response:
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
@@ -38,6 +139,7 @@ def assign_role(user_id: int, body: AssignRoleIn, db: Session = Depends(get_db))
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
     exists = db.query(UserRole).filter(UserRole.user_id == user.id, UserRole.role_id == role.id).first()
     if exists:
-        return  # idempotent
+        return Response(status_code=status.HTTP_204_NO_CONTENT)  # idempotent
     db.add(UserRole(user_id=user.id, role_id=role.id))
     db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

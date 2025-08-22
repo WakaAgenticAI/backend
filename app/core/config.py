@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     # Render (MCP) integration
     RENDER_API_KEY: Optional[str] = None
 
+    # Embeddings/KB
+    CHROMA_PERSIST_DIR: str = ".chromadb"
+
 
 @lru_cache
 def get_settings() -> Settings:
