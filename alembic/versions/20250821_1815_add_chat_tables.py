@@ -17,30 +17,51 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.create_table(
-        "chat_sessions",
-        sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column("user_id", sa.Integer(), nullable=True, index=True),
-        sa.Column("status", sa.String(length=32), nullable=False, server_default="open"),
-        sa.Column("last_activity_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
-    )
-    op.create_index("ix_chat_sessions_user_id", "chat_sessions", ["user_id"], unique=False)
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    # Compute existing indexes for chat_messages only (chat_sessions not created yet)
+    existing_msg_idx = {idx["name"] for idx in inspector.get_indexes("chat_messages")} if inspector.has_table("chat_messages") else set()
 
-    op.create_table(
-        "chat_messages",
-        sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column("session_id", sa.Integer(), sa.ForeignKey("chat_sessions.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("role", sa.String(length=16), nullable=False),
-        sa.Column("content", sa.Text(), nullable=False),
-        sa.Column("audio_url", sa.String(length=1024), nullable=True),
-        sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
-    )
-    op.create_index("ix_chat_messages_session_id", "chat_messages", ["session_id"], unique=False)
+    if not inspector.has_table("chat_sessions"):
+        op.create_table(
+            "chat_sessions",
+            sa.Column("id", sa.Integer(), primary_key=True),
+            sa.Column("user_id", sa.Integer(), nullable=True),
+            sa.Column("status", sa.String(length=32), nullable=False, server_default="open"),
+            sa.Column("last_activity_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
+        )
+    # Recompute inspector after creating table to avoid duplicate index with implicit creation
+    inspector = sa.inspect(bind)
+    existing_chat_idx = {idx["name"] for idx in inspector.get_indexes("chat_sessions")}
+    if "ix_chat_sessions_user_id" not in existing_chat_idx:
+        op.create_index("ix_chat_sessions_user_id", "chat_sessions", ["user_id"], unique=False)
+
+    if not inspector.has_table("chat_messages"):
+        op.create_table(
+            "chat_messages",
+            sa.Column("id", sa.Integer(), primary_key=True),
+            sa.Column("session_id", sa.Integer(), sa.ForeignKey("chat_sessions.id", ondelete="CASCADE"), nullable=False),
+            sa.Column("role", sa.String(length=16), nullable=False),
+            sa.Column("content", sa.Text(), nullable=False),
+            sa.Column("audio_url", sa.String(length=1024), nullable=True),
+            sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
+        )
+    if "ix_chat_messages_session_id" not in existing_msg_idx:
+        op.create_index("ix_chat_messages_session_id", "chat_messages", ["session_id"], unique=False)
 
 
 def downgrade() -> None:
-    op.drop_index("ix_chat_messages_session_id", table_name="chat_messages")
-    op.drop_table("chat_messages")
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    existing_chat_idx = {idx["name"] for idx in inspector.get_indexes("chat_sessions")} if inspector.has_table("chat_sessions") else set()
+    existing_msg_idx = {idx["name"] for idx in inspector.get_indexes("chat_messages")} if inspector.has_table("chat_messages") else set()
 
-    op.drop_index("ix_chat_sessions_user_id", table_name="chat_sessions")
-    op.drop_table("chat_sessions")
+    if "ix_chat_messages_session_id" in existing_msg_idx:
+        op.drop_index("ix_chat_messages_session_id", table_name="chat_messages")
+    if inspector.has_table("chat_messages"):
+        op.drop_table("chat_messages")
+
+    if "ix_chat_sessions_user_id" in existing_chat_idx:
+        op.drop_index("ix_chat_sessions_user_id", table_name="chat_sessions")
+    if inspector.has_table("chat_sessions"):
+        op.drop_table("chat_sessions")

@@ -6,6 +6,16 @@ This repo is structured for incremental growth: start as a modular monolith and 
 
 ---
 
+## Documentation
+
+- Frontend (Vercel) Deployment — `docs/frontend-vercel-deploy.md`
+- Backend (Render) Deployment — `docs/backend-render-deploy.md`
+- Database Explanation — `docs/database-explanation.md`
+- MCP Usage Guide — `docs/mcp-usage-guide.md`
+- Product Guide — `docs/product-guide.md`
+
+---
+
 ## Features
 
 - **FastAPI** app with versioned routing and CORS
@@ -125,6 +135,40 @@ Run with coverage (preconfigured):
 ```
 pytest --cov=app --cov-report=term-missing
 ```
+
+---
+
+## Frontend Companion (Next.js)
+
+The frontend lives in `frontend/wakaagent-ai/` and pairs with this backend.
+
+### Environment
+
+- `NEXT_PUBLIC_API_BASE` — base URL to this backend (e.g., `http://localhost:8000/api/v1` or your Render URL)
+- `NEXT_PUBLIC_DEMO_BEARER` — optional bearer token for demo-only persistence
+
+Create `frontend/wakaagent-ai/.env.local`:
+
+```
+NEXT_PUBLIC_API_BASE=http://localhost:8000/api/v1
+# NEXT_PUBLIC_DEMO_BEARER=eyJhbGci...
+```
+
+### Local Development
+
+```bash
+cd frontend/wakaagent-ai
+npm i --legacy-peer-deps
+NEXT_PUBLIC_API_BASE=http://localhost:8000/api/v1 npm run dev
+```
+
+Open http://localhost:3000 (or the next available port if 3000 is busy).
+
+CRM “Add Customer” performs a local add and then best‑effort POST to `/customers` with an Authorization header using either `localStorage.access_token` or `NEXT_PUBLIC_DEMO_BEARER`. Finance/Admin CSV exports include a UTF‑8 BOM for Excel.
+
+### Deployment
+
+See `docs/frontend-vercel-deploy.md` for a step‑by‑step Vercel guide.
 
 ---
 

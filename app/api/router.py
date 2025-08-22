@@ -11,6 +11,7 @@ def get_api_router() -> APIRouter:
     except ImportError:  # pragma: no cover - optional during tests
         auth = None  # type: ignore
     from app.api.v1.endpoints import products, roles
+    from app.api.v1.endpoints import customers
     from app.api.v1.endpoints import inventory, tools
 
     api_router = APIRouter()
@@ -24,6 +25,7 @@ def get_api_router() -> APIRouter:
     if auth is not None:
         api_router.include_router(auth.router, tags=["auth"])  # /auth/login, /auth/refresh
     api_router.include_router(products.router, tags=["products"])  # /products
+    api_router.include_router(customers.router, tags=["customers"])  # /customers
     api_router.include_router(roles.router, tags=["roles"])  # /roles
     api_router.include_router(inventory.router, tags=["inventory"])  # /warehouses, /inventory
     api_router.include_router(tools.router, tags=["tools"])  # /tools/execute

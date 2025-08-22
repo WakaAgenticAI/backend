@@ -43,6 +43,17 @@ class Realtime:
             async def connect(sid, environ):  # type: ignore
                 logger.info("socket_connect_chat", extra={"sid": sid})
 
+            # Room join for chat sessions
+            @self.sio.on("join", namespace="/chat")  # type: ignore
+            async def join_room(sid, data):
+                try:
+                    room = (data or {}).get("room")
+                    if room:
+                        await self.sio.enter_room(sid, room, namespace="/chat")  # type: ignore
+                        logger.info("socket_join_room", extra={"sid": sid, "room": room})
+                except Exception as e:  # pragma: no cover
+                    logger.warning("socket_join_failed", extra={"error": str(e)})
+
             # Mount Socket.IO on the FastAPI app at /ws (keeps existing routes intact)
             sio_app = socketio.ASGIApp(self.sio, other_asgi_app=app, socketio_path="ws")
             app.router.lifespan_context  # keep reference to ensure FastAPI lifespan runs

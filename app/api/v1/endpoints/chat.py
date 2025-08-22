@@ -14,6 +14,7 @@ from app.schemas.chat import (
 from app.core.deps import get_current_user
 from app.db.session import get_db
 from app.models.chat import ChatSession, ChatMessage
+from app.realtime.emitter import chat_session_event
 
 router = APIRouter()
 
@@ -101,6 +102,12 @@ async def create_message(
     db.commit()
     db.refresh(msg)
 
+    # Emit user message to realtime subscribers
+    try:
+        await chat_session_event(session_id, "chat.message", {"id": msg.id, "role": msg.role, "content": msg.content})
+    except Exception:
+        pass
+
     # Whisper + LLM routing stubs
     if body.audio_url and not body.content:
         # call whisper client to transcribe (stubbed)
@@ -113,18 +120,53 @@ async def create_message(
             content = ""
 
     # Use Orchestrator to route intent if we later extract intents; for now simple echo or LLM stub
+    # Optional KB retrieval to enrich reply
+    kb_snippets: list[dict] = []
+    try:
+        from app.kb import service as kb_service
+
+        kb_snippets = kb_service.kb_query("default", query=content or "", top_k=3)
+        if kb_snippets:
+            # Emit suggestions separately for UI
+            try:
+                await chat_session_event(
+                    session_id,
+                    "chat.kb_suggestions",
+                    {"items": kb_snippets},
+                )
+            except Exception:
+                pass
+    except Exception:
+        kb_snippets = []
+
+    # LLM or fallback echo
     try:
         from app.services.llm_client import complete
 
         reply_text = await complete(prompt=content, session_id=session_id)
     except Exception:
-        reply_text = ""
+        # Fallback basic reply possibly referencing KB title(s)
+        tips = (
+            f"\n\nRelated: " + ", ".join([it.get("metadata", {}).get("title", "doc") for it in kb_snippets])
+            if kb_snippets
+            else ""
+        )
+        reply_text = (content or "").strip() and ("Acknowledged: " + content + tips) or ""
 
     # Save agent reply
     reply = ChatMessage(session_id=session_id, role="agent", content=reply_text or "")
     db.add(reply)
     db.commit()
     db.refresh(reply)
+
+    try:
+        await chat_session_event(
+            session_id,
+            "chat.message",
+            {"id": reply.id, "role": reply.role, "content": reply.content},
+        )
+    except Exception:
+        pass
 
     return ChatMessageOut(
         id=reply.id,

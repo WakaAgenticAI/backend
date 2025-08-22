@@ -18,19 +18,48 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # ensure index exists for product_id
-    op.create_index("ix_order_items_product_id", "order_items", ["product_id"], unique=False)
-    # add FK constraint (if not already exists)
-    op.create_foreign_key(
-        "fk_order_items_product_id_products",
-        source_table="order_items",
-        referent_table="products",
-        local_cols=["product_id"],
-        remote_cols=["id"],
-        ondelete="RESTRICT",
-    )
+    bind = op.get_bind()
+    dialect = bind.dialect.name if bind is not None else ""
+    inspector = sa.inspect(bind)
+    existing_indexes = {idx["name"] for idx in inspector.get_indexes("order_items")}
+    if dialect == "sqlite":
+        # SQLite requires batch operations for ALTERs
+        with op.batch_alter_table("order_items") as batch_op:
+            if "ix_order_items_product_id" not in existing_indexes:
+                batch_op.create_index("ix_order_items_product_id", ["product_id"], unique=False)
+            batch_op.create_foreign_key(
+                "fk_order_items_product_id_products",
+                referent_table="products",
+                local_cols=["product_id"],
+                remote_cols=["id"],
+                ondelete="RESTRICT",
+            )
+    else:
+        # ensure index exists for product_id
+        if "ix_order_items_product_id" not in existing_indexes:
+            op.create_index("ix_order_items_product_id", "order_items", ["product_id"], unique=False)
+        # add FK constraint (if not already exists)
+        op.create_foreign_key(
+            "fk_order_items_product_id_products",
+            source_table="order_items",
+            referent_table="products",
+            local_cols=["product_id"],
+            remote_cols=["id"],
+            ondelete="RESTRICT",
+        )
 
 
 def downgrade() -> None:
-    op.drop_constraint("fk_order_items_product_id_products", "order_items", type_="foreignkey")
-    op.drop_index("ix_order_items_product_id", table_name="order_items")
+    bind = op.get_bind()
+    dialect = bind.dialect.name if bind is not None else ""
+    inspector = sa.inspect(bind)
+    existing_indexes = {idx["name"] for idx in inspector.get_indexes("order_items")}
+    if dialect == "sqlite":
+        with op.batch_alter_table("order_items") as batch_op:
+            batch_op.drop_constraint("fk_order_items_product_id_products", type_="foreignkey")
+            if "ix_order_items_product_id" in existing_indexes:
+                batch_op.drop_index("ix_order_items_product_id")
+    else:
+        op.drop_constraint("fk_order_items_product_id_products", "order_items", type_="foreignkey")
+        if "ix_order_items_product_id" in existing_indexes:
+            op.drop_index("ix_order_items_product_id", table_name="order_items")
