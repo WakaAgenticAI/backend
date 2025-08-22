@@ -8,7 +8,7 @@ from app.db.session import get_db
 from app.core.deps import require_roles
 from app.models.orders import Order
 from app.core.audit import audit_log
-from app.realtime.emitter import order_updated
+from app.realtime.emitter import order_created, order_updated, order_fulfilled
 
 router = APIRouter()
 
@@ -17,7 +17,7 @@ router = APIRouter()
 async def create_order(data: OrderCreate, req: Request, db: Session = Depends(get_db)) -> OrderOut:
     try:
         _order_id, out = orders_service.create_order(db, data)
-        await order_updated(req.app, _order_id, {"status": "created", "order_id": _order_id})
+        await order_created(_order_id, {"status": "created", "order_id": _order_id})
         return out
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -55,7 +55,7 @@ async def fulfill_order(order_id: int, req: Request, db: Session = Depends(get_d
     try:
         o = orders_service.fulfill_order(db, order_id)
         audit_log(action="fulfill", entity="order", entity_id=o.id, data={"status": o.status})
-        await order_updated(req.app, o.id, {"status": o.status, "order_id": o.id})
+        await order_fulfilled(o.id, {"status": o.status, "order_id": o.id})
         return OrderOut(id=o.id, status=o.status, total=float(o.total), currency=o.currency)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -70,5 +70,5 @@ async def update_order(order_id: int, body: OrderUpdate, req: Request, db: Sessi
     db.commit()
     db.refresh(o)
     audit_log(action="update", entity="order", entity_id=o.id, data={"status": o.status})
-    await order_updated(req.app, o.id, {"status": o.status, "order_id": o.id})
+    await order_updated(o.id, {"status": o.status, "order_id": o.id})
     return OrderOut(id=o.id, status=o.status, total=float(o.total), currency=o.currency)

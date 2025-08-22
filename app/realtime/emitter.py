@@ -1,8 +1,34 @@
 from __future__ import annotations
 from typing import Any
 
-async def order_updated(app, order_id: int, payload: dict[str, Any] | None = None) -> None:
+from app.core.app_state import get_app
+
+
+async def order_created(order_id: int, payload: dict[str, Any] | None = None) -> None:
+    app = get_app()
+    if not app:
+        return
     rt = getattr(app.state, "realtime", None)
     if not rt or not getattr(rt, "enabled", False):
         return
-    await rt.emit("ORDER_UPDATED", room=f"orders:{order_id}", data=payload or {})
+    await rt.emit("order.created", room=f"orders:{order_id}", data=payload or {}, namespace="/orders")
+
+
+async def order_fulfilled(order_id: int, payload: dict[str, Any] | None = None) -> None:
+    app = get_app()
+    if not app:
+        return
+    rt = getattr(app.state, "realtime", None)
+    if not rt or not getattr(rt, "enabled", False):
+        return
+    await rt.emit("order.fulfilled", room=f"orders:{order_id}", data=payload or {}, namespace="/orders")
+
+
+async def order_updated(order_id: int, payload: dict[str, Any] | None = None) -> None:
+    app = get_app()
+    if not app:
+        return
+    rt = getattr(app.state, "realtime", None)
+    if not rt or not getattr(rt, "enabled", False):
+        return
+    await rt.emit("order.updated", room=f"orders:{order_id}", data=payload or {}, namespace="/orders")

@@ -6,6 +6,8 @@ from app.core.config import get_settings
 from app.api.router import api_router
 from app.agents.orchestrator import Orchestrator
 from app.agents.orders_agent import OrdersAgent
+from app.agents.orders_lookup_agent import OrdersLookupAgent
+from app.agents.inventory_agent import InventoryAgent
 from app.db.session import SessionLocal
 from app.core.security import get_password_hash
 from app.models.users import User
@@ -15,15 +17,20 @@ from app.realtime.server import Realtime
 from app.models.inventory import Warehouse, Inventory
 from app.models.products import Product
 from app.core.middleware import RequestIDMiddleware, SimpleRateLimitMiddleware
+from app.core.app_state import set_app
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
     setup_json_logging()
+    # Expose app globally for subsystems (realtime emitters, etc.)
+    set_app(app)
     # Initialize orchestrator and register domain agents
     app.state.orchestrator = Orchestrator()
     app.state.orchestrator.register(OrdersAgent())
+    app.state.orchestrator.register(OrdersLookupAgent())
+    app.state.orchestrator.register(InventoryAgent())
     # Initialize realtime (Socket.IO) with optional Redis manager
     settings = get_settings()
     app.state.realtime = Realtime(redis_url=settings.REDIS_URL)
