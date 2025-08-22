@@ -31,6 +31,9 @@ class Settings(BaseSettings):
     GROQ_API_KEY: Optional[str] = None
     GROQ_MODEL: str = "llama3-8b-8192"
 
+    # Render (MCP) integration
+    RENDER_API_KEY: Optional[str] = None
+
 
 @lru_cache
 def get_settings() -> Settings:

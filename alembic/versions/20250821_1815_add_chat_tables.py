@@ -1,7 +1,7 @@
 """add chat sessions and messages
 
 Revision ID: 20250821_1815_add_chat
-Revises: 20250821_1754_add_fk_order_items_product_id
+Revises: a1c9e5d2f7ab
 Create Date: 2025-08-21 18:15:00.000000
 """
 from __future__ import annotations
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = "20250821_1815_add_chat"
-down_revision = "20250821_1754_add_fk_order_items_product_id"
+down_revision = "a1c9e5d2f7ab"
 branch_labels = None
 depends_on = None
 
