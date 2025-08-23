@@ -12,24 +12,26 @@ readme = "README.md"
 keywords = ["fastapi", "ai", "agents", "socket.io", "postgres", "redis", "whisper", "ollama", "chromadb"]
 
 # Runtime dependencies (pin minor where reasonable)
-[project.dependencies]
-fastapi = "^0.112.0"
-uvicorn = { version = "^0.30.0", extras = ["standard"] }
-pydantic = "^2.7.0"
-pydantic-settings = "^2.3.0"
-python-dotenv = "^1.0.1"
-SQLAlchemy = "^2.0.30"
-alembic = "^1.13.2"
-psycopg = { version = "^3.1.19", extras = ["binary"] }
-redis = "^5.0.4"
-python-socketio = "^5.11.1"
-httpx = "^0.27.0"
-python-jose = "^3.3.0"
-passlib = { version = "^1.7.4", extras = ["bcrypt"] }
-structlog = "^24.1.0"
-loguru = "^0.7.2"
-tenacity = "^8.3.0"
-groq = ">=0.9.0"
+dependencies = [
+  "fastapi>=0.112.0,<0.113.0",
+  "uvicorn[standard]>=0.30.0,<0.31.0",
+  "pydantic>=2.7.0,<3.0.0",
+  "pydantic-settings>=2.3.0,<3.0.0",
+  "python-dotenv>=1.0.1,<2.0.0",
+  "SQLAlchemy>=2.0.30,<3.0.0",
+  "alembic>=1.13.2,<2.0.0",
+  "psycopg[binary]>=3.1.19,<4.0.0",
+  "redis>=5.0.4,<6.0.0",
+  "python-socketio>=5.11.1,<6.0.0",
+  "httpx>=0.27.0,<0.28.0",
+  "python-jose>=3.3.0,<4.0.0",
+  "passlib[bcrypt]>=1.7.4,<2.0.0",
+  "structlog>=24.1.0,<25.0.0",
+  "loguru>=0.7.2,<1.0.0",
+  "tenacity>=8.3.0,<9.0.0",
+  "groq>=0.9.0",
+  "celery>=5.4.0,<6.0.0",
+]
 
 # Optional: typing + dev tools in optional-dependencies
 [project.optional-dependencies]
@@ -67,3 +69,9 @@ line-length = 100
 python_version = "3.11"
 warn_unused_configs = true
 ignore_missing_imports = true
+
+[tool.setuptools]
+package-dir = {"" = "."}
+
+[tool.setuptools.packages.find]
+include = ["app*"]

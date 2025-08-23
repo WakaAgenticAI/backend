@@ -31,6 +31,12 @@ class Settings(BaseSettings):
     GROQ_API_KEY: Optional[str] = None
     GROQ_MODEL: str = "llama3-8b-8192"
 
+    # Feature flags
+    AI_REPORTS_ENABLED: bool = True
+
+    # Reports export
+    REPORTS_EXPORT_DIR: str = "exports"
+
     # Render (MCP) integration
     RENDER_API_KEY: Optional[str] = None
 

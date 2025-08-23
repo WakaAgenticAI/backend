@@ -206,14 +206,74 @@ cp "WakaAgent AI.pdf" backend/
 
 ---
 
+## Production Guide
+
+### Auth & Default Admin
+- Seeded on startup (see `app/main.py`):
+  - Email: `admin@example.com`
+  - Password: `admin123`
+- Login payload: `{ "email": string, "password": string }` → `POST /api/v1/auth/login`
+- Returns `{ access_token, refresh_token, token_type }`. Frontend uses Bearer token in `Authorization` header.
+
+### CORS Configuration
+In `app/main.py`, CORS is configured via `CORSMiddleware` using `CORS_ORIGINS` env. For production, set explicit origins (not `*`):
+
+```
+export CORS_ORIGINS=https://your-frontend-domain
+```
+
+Backend code already sets:
+- `allow_credentials=True/False` depending on your needs. For Bearer-token auth (no cookies), prefer `allow_credentials=False`.
+- `allow_methods=["*"]`, `allow_headers=["*"]`.
+
+### WebSockets (Socket.IO)
+- Socket.IO is mounted under path `/ws` and namespace `/chat` (see `app.realtime.server.Realtime`).
+- Ensure your reverse proxy supports upgrades:
+
+Nginx example:
+```
+location /ws/ {
+  proxy_http_version 1.1;
+  proxy_set_header Upgrade $http_upgrade;
+  proxy_set_header Connection "upgrade";
+  proxy_pass http://backend:8000/ws/;
+}
+```
+
+### Reports: Downloadable Files
+- Report builders write files into `REPORTS_EXPORT_DIR` (see `app/services/reports_service.py`).
+- Endpoints `GET /admin/reports/daily-sales/latest` and `GET /admin/reports/monthly-audit/latest` return DB rows including `file_url` (server path).
+- To make downloads public:
+  1) Mount a static route to serve `REPORTS_EXPORT_DIR` (recommended):
+
+  ```python
+  # in app/main.py (after FastAPI app creation)
+  from fastapi.staticfiles import StaticFiles
+  from app.core.config import get_settings
+  settings = get_settings()
+  app.mount("/reports-files", StaticFiles(directory=settings.REPORTS_EXPORT_DIR), name="reports_files")
+  ```
+
+  2) Include a `download_url` in report responses (e.g., `https://api.yourdomain.com/reports-files/<filename>`). The frontend already opens `download_url` when present.
+
+  Alternatively, add `GET /api/v1/reports/{id}/download` that returns `FileResponse` for the stored file.
+
+### Frontend (Vercel) Environment
+- Set this in Vercel → Project → Settings → Environment Variables and redeploy:
+```
+NEXT_PUBLIC_API_BASE=https://api.yourdomain.com/api/v1
+```
+The frontend derives the WebSocket origin from `NEXT_PUBLIC_API_BASE` automatically (`wss://api.yourdomain.com/ws`).
+
+---
+
 ## Notes & Next Steps
 
 - Add Alembic migrations and initial models per PRD tables.
-- Implement auth (JWT login/refresh) and RBAC guards.
-- Wire Socket.IO server or Server-Sent Events for realtime.
-- Add agents (LangGraph) and AI service clients (Ollama/Whisper/ChromaDB) behind feature flags.
-- Expand Groq usage: streaming, tool-use orchestration via LangGraph.
-- Expand tests: API contract tests, service unit tests, and integration tests with a test DB.
+- Implement auth refresh flow in frontend using `POST /auth/refresh`.
+- Optionally restrict CORS more tightly per environment.
+- Mount static route for reports (see above) or upload exports to object storage (S3/GCS) and return signed URLs.
+- Expand tests: API contract tests, service unit tests, integration tests.
 
 ---
 

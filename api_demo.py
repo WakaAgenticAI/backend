@@ -28,6 +28,8 @@ def main() -> int:
     parser.add_argument("--create-product", action="store_true", help="Attempt to create a sample product")
     parser.add_argument("--create-order", action="store_true", help="Attempt to create a sample order for first product")
     parser.add_argument("--create-customer", action="store_true", help="Attempt to create a sample customer")
+    parser.add_argument("--reports-daily", nargs="?", const="", help="Trigger daily sales report (optional date YYYY-MM-DD)")
+    parser.add_argument("--reports-monthly", nargs="?", const="", help="Trigger monthly audit report (optional month YYYY-MM)")
     args = parser.parse_args()
 
     base = args.base.rstrip("/")
@@ -135,6 +137,26 @@ def main() -> int:
                     json={"intent": "echo", "payload": {"message": "demo"}},
                 ),
             )
+
+            # Reports demo: trigger and fetch latest
+            if args.reports_daily is not None:
+                url = f"{base}/admin/reports/daily-sales"
+                if args.reports_daily:
+                    url += f"?run_date={args.reports_daily}"
+                p("POST /admin/reports/daily-sales:", client.post(url, headers=headers))
+                p(
+                    "GET /admin/reports/daily-sales/latest:",
+                    client.get(f"{base}/admin/reports/daily-sales/latest", headers=headers),
+                )
+            if args.reports_monthly is not None:
+                url = f"{base}/admin/reports/monthly-audit"
+                if args.reports_monthly:
+                    url += f"?month={args.reports_monthly}"
+                p("POST /admin/reports/monthly-audit:", client.post(url, headers=headers))
+                p(
+                    "GET /admin/reports/monthly-audit/latest:",
+                    client.get(f"{base}/admin/reports/monthly-audit/latest", headers=headers),
+                )
 
         # Optional AI completion
         if args.ai is not None:
