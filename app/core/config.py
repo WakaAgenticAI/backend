@@ -37,6 +37,10 @@ class Settings(BaseSettings):
     # Reports export
     REPORTS_EXPORT_DIR: str = "exports"
 
+    # External tools directory (kept at repo root by default)
+    # If unset, backend will attempt to resolve '../../tools' relative to this file.
+    TOOLS_DIR: Optional[str] = None
+
     # Render (MCP) integration
     RENDER_API_KEY: Optional[str] = None
 
