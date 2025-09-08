@@ -30,81 +30,12 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_audit_logs_actor_id'), 'audit_logs', ['actor_id'], unique=False)
-    op.create_table('chat_sessions',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('user_id', sa.Integer(), nullable=True),
-    sa.Column('status', sa.String(length=32), nullable=False),
-    sa.Column('last_activity_at', sa.DateTime(), nullable=False),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_chat_sessions_user_id'), 'chat_sessions', ['user_id'], unique=False)
-    op.create_table('orders',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('customer_id', sa.Integer(), nullable=False),
-    sa.Column('status', sa.String(length=32), nullable=False),
-    sa.Column('currency', sa.String(length=8), nullable=False),
-    sa.Column('total', sa.Numeric(precision=12, scale=2), nullable=False),
-    sa.Column('channel', sa.String(length=32), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_orders_customer_id'), 'orders', ['customer_id'], unique=False)
-    op.create_index(op.f('ix_orders_id'), 'orders', ['id'], unique=False)
-    op.create_table('products',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('sku', sa.String(length=64), nullable=False),
-    sa.Column('name', sa.String(length=255), nullable=False),
-    sa.Column('unit', sa.String(length=32), nullable=False),
-    sa.Column('price_ngn', sa.Numeric(precision=12, scale=2), nullable=False),
-    sa.Column('tax_rate', sa.Numeric(precision=5, scale=2), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_products_sku'), 'products', ['sku'], unique=True)
-    op.create_table('refresh_tokens',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('user_id', sa.Integer(), nullable=False),
-    sa.Column('jti', sa.String(length=64), nullable=False),
-    sa.Column('expires_at', sa.DateTime(), nullable=False),
-    sa.Column('revoked_at', sa.DateTime(), nullable=True),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_refresh_tokens_jti'), 'refresh_tokens', ['jti'], unique=True)
-    op.create_index(op.f('ix_refresh_tokens_user_id'), 'refresh_tokens', ['user_id'], unique=False)
-    op.create_table('roles',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('name', sa.String(length=64), nullable=False),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_roles_name'), 'roles', ['name'], unique=True)
-    op.create_table('users',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('email', sa.String(length=255), nullable=False),
-    sa.Column('phone', sa.String(length=32), nullable=True),
-    sa.Column('full_name', sa.String(length=255), nullable=True),
-    sa.Column('password_hash', sa.String(length=255), nullable=False),
-    sa.Column('status', sa.String(length=32), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True)
     op.create_table('warehouses',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(length=255), nullable=False),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('name')
     )
-    op.create_table('chat_messages',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('session_id', sa.Integer(), nullable=False),
-    sa.Column('role', sa.String(length=16), nullable=False),
-    sa.Column('content', sa.Text(), nullable=False),
-    sa.Column('audio_url', sa.String(length=1024), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.ForeignKeyConstraint(['session_id'], ['chat_sessions.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_chat_messages_session_id'), 'chat_messages', ['session_id'], unique=False)
     op.create_table('forecasts',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('product_id', sa.Integer(), nullable=False),
@@ -130,64 +61,18 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_inventory_product_id'), 'inventory', ['product_id'], unique=False)
     op.create_index(op.f('ix_inventory_warehouse_id'), 'inventory', ['warehouse_id'], unique=False)
-    op.create_table('order_items',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('order_id', sa.Integer(), nullable=False),
-    sa.Column('product_id', sa.Integer(), nullable=False),
-    sa.Column('qty', sa.Integer(), nullable=False),
-    sa.Column('price', sa.Numeric(precision=12, scale=2), nullable=False),
-    sa.Column('line_total', sa.Numeric(precision=12, scale=2), nullable=False),
-    sa.ForeignKeyConstraint(['order_id'], ['orders.id'], ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['product_id'], ['products.id'], ondelete='RESTRICT'),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_order_items_order_id'), 'order_items', ['order_id'], unique=False)
-    op.create_index(op.f('ix_order_items_product_id'), 'order_items', ['product_id'], unique=False)
-    op.create_table('user_roles',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('user_id', sa.Integer(), nullable=False),
-    sa.Column('role_id', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['role_id'], ['roles.id'], ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('user_id', 'role_id', name='uq_user_role')
-    )
-    op.create_index(op.f('ix_user_roles_role_id'), 'user_roles', ['role_id'], unique=False)
-    op.create_index(op.f('ix_user_roles_user_id'), 'user_roles', ['user_id'], unique=False)
     # ### end Alembic commands ###
 
 
 def downgrade() -> None:
     # ### commands auto generated by Alembic - please adjust! ###
-    op.drop_index(op.f('ix_user_roles_user_id'), table_name='user_roles')
-    op.drop_index(op.f('ix_user_roles_role_id'), table_name='user_roles')
-    op.drop_table('user_roles')
-    op.drop_index(op.f('ix_order_items_product_id'), table_name='order_items')
-    op.drop_index(op.f('ix_order_items_order_id'), table_name='order_items')
-    op.drop_table('order_items')
     op.drop_index(op.f('ix_inventory_warehouse_id'), table_name='inventory')
     op.drop_index(op.f('ix_inventory_product_id'), table_name='inventory')
     op.drop_table('inventory')
     op.drop_index(op.f('ix_forecasts_warehouse_id'), table_name='forecasts')
     op.drop_index(op.f('ix_forecasts_product_id'), table_name='forecasts')
     op.drop_table('forecasts')
-    op.drop_index(op.f('ix_chat_messages_session_id'), table_name='chat_messages')
-    op.drop_table('chat_messages')
     op.drop_table('warehouses')
-    op.drop_index(op.f('ix_users_email'), table_name='users')
-    op.drop_table('users')
-    op.drop_index(op.f('ix_roles_name'), table_name='roles')
-    op.drop_table('roles')
-    op.drop_index(op.f('ix_refresh_tokens_user_id'), table_name='refresh_tokens')
-    op.drop_index(op.f('ix_refresh_tokens_jti'), table_name='refresh_tokens')
-    op.drop_table('refresh_tokens')
-    op.drop_index(op.f('ix_products_sku'), table_name='products')
-    op.drop_table('products')
-    op.drop_index(op.f('ix_orders_id'), table_name='orders')
-    op.drop_index(op.f('ix_orders_customer_id'), table_name='orders')
-    op.drop_table('orders')
-    op.drop_index(op.f('ix_chat_sessions_user_id'), table_name='chat_sessions')
-    op.drop_table('chat_sessions')
     op.drop_index(op.f('ix_audit_logs_actor_id'), table_name='audit_logs')
     op.drop_table('audit_logs')
     # ### end Alembic commands ###

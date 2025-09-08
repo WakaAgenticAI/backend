@@ -8,24 +8,25 @@ This repo is structured for incremental growth: start as a modular monolith and 
 
 ## Documentation
 
-- Frontend (Vercel) Deployment — `docs/frontend-vercel-deploy.md`
-- Backend (Render) Deployment — `docs/backend-render-deploy.md`
-- Database Explanation — `docs/database-explanation.md`
-- MCP Usage Guide — `docs/mcp-usage-guide.md`
-- Product Guide — `docs/product-guide.md`
+This README is the source of truth for backend setup and contribution. Additional docs will be added under a `docs/` directory in future iterations. For now, see:
+
+- `scripts/render_cli.py` for Render API CLI helpers (requires `RENDER_API_KEY`).
+- `tools/mcp_config.template.json` for MCP client configuration to access Render MCP server.
 
 ---
 
 ## Features
 
 - **FastAPI** app with versioned routing and CORS
-- **Modular structure**: `api`, `core`, `models`, `services`, `utils`, `db`, `agents`
-- **Config** via `.env` (Pydantic Settings)
-- **DB ready**: SQLAlchemy engine + session factory (PostgreSQL URL)
-- **Testing**: pytest + coverage wired via `pyproject.toml`
-- **Environment**: `environment.yaml` for conda
-- **Demo**: `api_demo.py` hits health and diagnostics endpoints
-- **AI**: Groq API integration (`/api/v1/ai/complete`) using `groq` Python SDK
+- **Modular structure**: `app/api`, `app/core`, `app/models`, `app/services`, `app/utils`, `app/db`, `app/agents`, `app/realtime`
+- **Config** via `.env` using Pydantic Settings (`app/core/config.py`)
+- **DB ready**: SQLAlchemy 2.x + Alembic migrations (PostgreSQL recommended)
+- **Realtime**: Socket.IO mounted at `/ws` with namespaces `/orders` and `/chat` (optional Redis manager)
+- **Testing**: pytest + coverage pre-wired via `pyproject.toml`
+- **Environment**: `environment.yaml`/`environment.yml` for conda
+- **Demo**: `api_demo.py` exercises health, auth, CRUD, reports, and AI endpoints
+- **AI**: Groq SDK for `/api/v1/ai/complete` (set `GROQ_API_KEY`)
+- **Tasks**: Celery app scaffold present (`app/celery_app.py`) for future background jobs
 
 ---
 
@@ -37,29 +38,73 @@ backend/
     api/
       v1/
         endpoints/
+          ai.py
+          auth.py
+          chat.py
+          customers.py
           health.py
+          inventory.py
+          orders.py
+          products.py
+          reports.py
+          roles.py
           testall.py
+        __init__.py
       router.py
     core/
+      app_state.py
+      audit.py
       config.py
+      logging.py
+      middleware.py
+      security.py
+      __init__.py
     db/
       session.py
+      __init__.py
     models/
       base.py
-    services/
+      users.py
+      roles.py
+      products.py
+      inventory.py
+      orders.py
+      audit.py
+      reports.py
+      __init__.py
+    realtime/
+      server.py
     agents/
+      orchestrator.py
+      inventory_agent.py
+      orders_agent.py
+      orders_lookup_agent.py
+      __init__.py
     schemas/
+      ...
+    services/
+      ...
     utils/
-    __init__.py
+      ...
+    celery_app.py
     main.py
+  alembic/
+    env.py
+    versions/
+      <timestamp>_*.py
   tests/
     conftest.py
-    test_health.py
+    test_*.py
+  scripts/
+    render_cli.py
+  tools/
+    mcp_config.template.json
   api_demo.py
+  docker-compose.yaml
   .env_example
   pyproject.toml
-  setup.py
   environment.yaml
+  environment.yml
   README.md
 ```
 
@@ -67,22 +112,35 @@ backend/
 
 ## Getting Started
 
-### 1) Create the Conda environment
+### 1) Create the environment
+
+Using Conda (recommended):
 
 ```
 conda env create -f environment.yaml
 conda activate wakaagent-backend
 ```
 
-If you prefer venv/pip, install dependencies using `pyproject.toml`:
+Or with venv/pip using `pyproject.toml`:
 
 ```
-pip install -e .
-# or
+python -m venv .venv
+source .venv/bin/activate
 pip install -e .[dev]
 ```
 
-### 2) Configure environment
+### 2) Start required services (optional for local SQLite, recommended for Postgres)
+
+Run Postgres locally with Docker:
+
+```
+docker compose up -d postgres
+```
+
+Then set `DATABASE_URL` accordingly (see next step). Default compose uses:
+`postgresql+psycopg://postgres:postgres@localhost:5432/wakaagent`
+
+### 3) Configure environment
 
 Copy `.env_example` to `.env` and adjust values:
 
@@ -91,14 +149,22 @@ cp .env_example .env
 ```
 
 Key settings (see `app/core/config.py`):
-- `DATABASE_URL` (PostgreSQL)
-- `REDIS_URL`
+- `DATABASE_URL` (PostgreSQL DSN)
+- `REDIS_URL` (optional; enables Redis manager for realtime)
 - `CORS_ORIGINS`
 - `JWT_SECRET`
 - Optional AI services: `OLLAMA_HOST`, `WHISPER_HOST`
 - Groq AI: `GROQ_API_KEY`, `GROQ_MODEL` (default: `llama3-8b-8192`)
 
-### 3) Run the API locally
+### 4) Initialize the database (Alembic)
+
+```
+alembic upgrade head
+```
+
+This uses `alembic/env.py` to load `DATABASE_URL` from `app/core/config.py`.
+
+### 5) Run the API locally
 
 ```
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
@@ -109,7 +175,7 @@ Docs: http://localhost:8000/api/v1/docs
 Health: `GET /api/v1/healthz`  |  Ready: `GET /api/v1/readyz`
 AI: `POST /api/v1/ai/complete` (set `GROQ_API_KEY`)
 
-### 4) Try the demo script
+### 6) Try the demo script
 
 ```
 python api_demo.py --base http://localhost:8000/api/v1
@@ -118,7 +184,7 @@ python api_demo.py --base http://localhost:8000/api/v1
 python api_demo.py --base http://localhost:8000/api/v1 --ai "Summarize WakaAgent in one sentence."
 ```
 
-Expected output shows 200s for `/healthz`, `/readyz`, and `/demo/testall` plus basic environment info (secrets redacted).
+The script also supports creating demo products/orders/customers and triggering reports.
 
 ---
 
@@ -130,10 +196,18 @@ Run tests:
 pytest
 ```
 
-Run with coverage (preconfigured):
+Run with coverage (preconfigured in `pyproject.toml`):
 
 ```
 pytest --cov=app --cov-report=term-missing
+```
+
+Lint/format/type-check:
+
+```
+ruff check .
+black .
+mypy app
 ```
 
 ---
@@ -176,9 +250,10 @@ See `docs/frontend-vercel-deploy.md` for a step‑by‑step Vercel guide.
 
 - **API routes** → `app/api/v1/endpoints/*.py` and register in `app/api/router.py`
 - **Business logic (domain)** → `app/services/` (e.g., `orders_service.py`, `crm_service.py`)
-- **Agent workflows** → `app/agents/` (e.g., LangGraph orchestrator, tools)
+- **Agent workflows** → `app/agents/` (`orchestrator.py`, `inventory_agent.py`, etc.)
+- **Realtime** → `app/realtime/server.py` (Socket.IO setup and emits)
 - **Database models** → `app/models/` with base in `base.py`
-- **DB session & migrations** → `app/db/session.py` (add Alembic later)
+- **DB session & migrations** → `app/db/session.py`, Alembic in `alembic/`
 - **Schemas (Pydantic)** → `app/schemas/` (request/response models)
 - **Utilities** → `app/utils/` (logging, helpers)
 - **Config** → `app/core/config.py`
@@ -188,9 +263,18 @@ See `docs/frontend-vercel-deploy.md` for a step‑by‑step Vercel guide.
 ## API Surface (current)
 
 - `GET /api/v1/healthz` — liveness check
-- `GET /api/v1/readyz` — readiness (extend with DB/Redis checks)
-- `GET /api/v1/demo/testall` — diagnostics with environment info
-- `POST /api/v1/ai/complete` — small completion using Groq LLM
+- `GET /api/v1/readyz` — readiness
+- `GET /api/v1/demo/testall` — diagnostics
+- `POST /api/v1/ai/complete` — Groq LLM completion
+- `POST /api/v1/auth/login`, `POST /api/v1/auth/refresh`, `GET /api/v1/auth/me`
+- `GET/POST /api/v1/products`, `GET /api/v1/products/{id}`, etc.
+- `GET/POST /api/v1/customers`, `GET /api/v1/customers/{id}`, etc.
+- `GET/POST /api/v1/orders`, `POST /api/v1/orders/{id}/fulfill`
+- `GET /api/v1/warehouses`, `GET/POST /api/v1/inventory`
+- `GET /api/v1/roles`
+- `POST /api/v1/tools/execute`
+- Reports (admin): `POST /api/v1/admin/reports/daily-sales`, `GET /api/v1/admin/reports/daily-sales/latest`,
+  `POST /api/v1/admin/reports/monthly-audit`, `GET /api/v1/admin/reports/monthly-audit/latest`
 
 ---
 
@@ -227,7 +311,7 @@ Backend code already sets:
 - `allow_methods=["*"]`, `allow_headers=["*"]`.
 
 ### WebSockets (Socket.IO)
-- Socket.IO is mounted under path `/ws` and namespace `/chat` (see `app.realtime.server.Realtime`).
+- Socket.IO is mounted under path `/ws` with namespaces `/orders` and `/chat` (see `app/realtime/server.py`).
 - Ensure your reverse proxy supports upgrades:
 
 Nginx example:
