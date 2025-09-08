@@ -272,7 +272,9 @@ See `docs/frontend-vercel-deploy.md` for a step‑by‑step Vercel guide.
 - `GET/POST /api/v1/orders`, `POST /api/v1/orders/{id}/fulfill`
 - `GET /api/v1/warehouses`, `GET/POST /api/v1/inventory`
 - `GET /api/v1/roles`
+- User roles (admin): `GET /api/v1/users/{user_id}/roles`, `POST /api/v1/users/{user_id}/roles`, `DELETE /api/v1/users/{user_id}/roles`
 - `POST /api/v1/tools/execute`
+- Chat sessions: `POST /api/v1/chat/sessions`, `GET /api/v1/chat/sessions/{session_id}/messages`, `POST /api/v1/chat/sessions/{session_id}/messages`
 - Reports (admin): `POST /api/v1/admin/reports/daily-sales`, `GET /api/v1/admin/reports/daily-sales/latest`,
   `POST /api/v1/admin/reports/monthly-audit`, `GET /api/v1/admin/reports/monthly-audit/latest`
 
