@@ -4,10 +4,13 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
 from app.api.router import get_api_router
-from app.agents.orchestrator import Orchestrator
-from app.agents.orders_agent import OrdersAgent
+from app.agents.orchestrator import get_orchestrator
+from app.agents.orders_agent import orders_agent
 from app.agents.orders_lookup_agent import OrdersLookupAgent
-from app.agents.inventory_agent import InventoryAgent
+from app.agents.inventory_agent import inventory_agent
+from app.agents.forecasting_agent import forecasting_agent
+from app.agents.fraud_detection_agent import fraud_detection_agent
+from app.agents.crm_agent import crm_agent
 from app.db.session import SessionLocal
 from app.core.security import get_password_hash
 from app.models.users import User
@@ -27,10 +30,13 @@ async def lifespan(app: FastAPI):
     # Expose app globally for subsystems (realtime emitters, etc.)
     set_app(app)
     # Initialize orchestrator and register domain agents
-    app.state.orchestrator = Orchestrator()
-    app.state.orchestrator.register(OrdersAgent())
-    app.state.orchestrator.register(OrdersLookupAgent())
-    app.state.orchestrator.register(InventoryAgent())
+    app.state.orchestrator = get_orchestrator()
+    app.state.orchestrator.register_agent(orders_agent)
+    app.state.orchestrator.register_agent(OrdersLookupAgent())
+    app.state.orchestrator.register_agent(inventory_agent)
+    app.state.orchestrator.register_agent(forecasting_agent)
+    app.state.orchestrator.register_agent(fraud_detection_agent)
+    app.state.orchestrator.register_agent(crm_agent)
     # Initialize realtime (Socket.IO) with optional Redis manager
     settings = get_settings()
     app.state.realtime = Realtime(redis_url=settings.REDIS_URL)

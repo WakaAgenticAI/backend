@@ -189,3 +189,157 @@ def test_inventory_agent_product_not_found(monkeypatch):
     out = _run(agent.handle("inventory.check", {"sku": "MISSING"}))
     assert out["handled"] is False
     assert out["reason"] == "product_not_found"
+
+
+# New AI Agent Tests
+def test_forecasting_agent_can_handle():
+    """Test forecasting agent can handle appropriate intents"""
+    from app.agents.forecasting_agent import forecasting_agent
+    
+    assert _run(forecasting_agent.can_handle("inventory.forecast.generate", {})) == True
+    assert _run(forecasting_agent.can_handle("forecast.analyze", {})) == True
+    assert _run(forecasting_agent.can_handle("order.create", {})) == False
+
+
+def test_fraud_detection_agent_can_handle():
+    """Test fraud detection agent can handle appropriate intents"""
+    from app.agents.fraud_detection_agent import fraud_detection_agent
+    
+    assert _run(fraud_detection_agent.can_handle("fraud.analyze_order", {})) == True
+    assert _run(fraud_detection_agent.can_handle("payment.validate", {})) == True
+    assert _run(fraud_detection_agent.can_handle("order.create", {})) == False
+
+
+def test_crm_agent_can_handle():
+    """Test CRM agent can handle appropriate intents"""
+    from app.agents.crm_agent import crm_agent
+    
+    assert _run(crm_agent.can_handle("customer.segment", {})) == True
+    assert _run(crm_agent.can_handle("crm.analyze", {})) == True
+    assert _run(crm_agent.can_handle("order.create", {})) == False
+
+
+def test_orders_agent_can_handle():
+    """Test orders agent can handle appropriate intents"""
+    from app.agents.orders_agent import orders_agent
+    
+    assert _run(orders_agent.can_handle("order.create", {})) == True
+    assert _run(orders_agent.can_handle("order.lookup", {})) == True
+    assert _run(orders_agent.can_handle("inventory.check", {})) == False
+
+
+def test_inventory_agent_can_handle():
+    """Test inventory agent can handle appropriate intents"""
+    from app.agents.inventory_agent import inventory_agent
+    
+    assert _run(inventory_agent.can_handle("inventory.check", {})) == True
+    assert _run(inventory_agent.can_handle("inventory.reserve", {})) == True
+    assert _run(inventory_agent.can_handle("order.create", {})) == False
+
+
+def test_orchestrator_workflow_determination():
+    """Test orchestrator workflow determination"""
+    from app.agents.orchestrator import get_orchestrator
+    
+    orchestrator = get_orchestrator()
+    
+    # Test workflow determination
+    order_workflow = orchestrator._determine_workflow("order.create")
+    assert "order_agent" in order_workflow
+    
+    inventory_workflow = orchestrator._determine_workflow("inventory.check")
+    assert "inventory_agent" in inventory_workflow
+    
+    customer_workflow = orchestrator._determine_workflow("customer.update")
+    assert "crm_agent" in customer_workflow
+    
+    fraud_workflow = orchestrator._determine_workflow("fraud.analyze")
+    assert "finance_agent" in fraud_workflow
+    
+    chat_workflow = orchestrator._determine_workflow("chat.general")
+    assert "chatbot_agent" in chat_workflow
+
+
+def test_intent_classification_examples():
+    """Test intent classification examples"""
+    from app.agents.orchestrator import get_orchestrator
+    
+    orchestrator = get_orchestrator()
+    
+    # Test intent examples
+    intents = orchestrator.intent_classifier.intent_examples
+    assert "order.create" in intents
+    assert "inventory.check" in intents
+    assert "customer.update" in intents
+    assert "fraud.analyze_order" in intents
+    assert "chat.general" in intents
+
+
+def test_agent_capabilities():
+    """Test agent capabilities retrieval"""
+    from app.agents.orchestrator import get_orchestrator
+    
+    orchestrator = get_orchestrator()
+    
+    # Test getting capabilities
+    capabilities = _run(orchestrator.get_agent_capabilities())
+    assert isinstance(capabilities, dict)
+    
+    # Check that we have capabilities for our agents
+    agent_names = list(capabilities.keys())
+    assert any("orders" in name for name in agent_names)
+    assert any("inventory" in name for name in agent_names)
+    assert any("forecast" in name for name in agent_names)
+    assert any("fraud" in name for name in agent_names)
+    assert any("crm" in name for name in agent_names)
+
+
+def test_orchestrator_agent_registration():
+    """Test that agents are properly registered with orchestrator"""
+    from app.agents.orchestrator import get_orchestrator
+    
+    orchestrator = get_orchestrator()
+    
+    # Test that agents are registered
+    assert len(orchestrator._agents) >= 5
+    assert "orders.management" in orchestrator._agents
+    assert "inventory.management" in orchestrator._agents
+    assert "inventory.forecast" in orchestrator._agents
+    assert "fraud.detection" in orchestrator._agents
+    assert "crm.management" in orchestrator._agents
+
+
+def test_multilingual_client_language_detection():
+    """Test multilingual client language detection"""
+    from app.services.multilingual_client import get_multilingual_client
+    
+    client = get_multilingual_client()
+    
+    # Test language detection
+    lang, confidence = client.detect_language("How far, wetin you fit help me with?")
+    assert lang.value in ["pcm", "en"]  # Should detect Pidgin or English
+    assert confidence >= 0.0
+    
+    lang, confidence = client.detect_language("Hello, how are you?")
+    assert lang.value == "en"  # Should detect English
+    assert confidence >= 0.0
+
+
+def test_multilingual_client_supported_languages():
+    """Test multilingual client supported languages"""
+    from app.services.multilingual_client import get_multilingual_client
+    
+    client = get_multilingual_client()
+    
+    # Test language support info
+    info = client.get_language_support_info()
+    assert "supported_languages" in info
+    assert len(info["supported_languages"]) == 5  # English, Pidgin, Hausa, Yoruba, Igbo
+    
+    # Check that all expected languages are present
+    language_codes = [lang["code"] for lang in info["supported_languages"]]
+    assert "en" in language_codes
+    assert "pcm" in language_codes
+    assert "ha" in language_codes
+    assert "yo" in language_codes
+    assert "ig" in language_codes

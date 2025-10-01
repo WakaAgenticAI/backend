@@ -25,6 +25,11 @@ def main() -> int:
     parser.add_argument("--email", default="admin@example.com", help="Login email for /auth/login")
     parser.add_argument("--password", default="admin123", help="Login password for /auth/login")
     parser.add_argument("--ai", nargs="?", const="Say hello in one short sentence.", help="Optional: call /ai/complete with a prompt. Uses GROQ_API_KEY from env.")
+    parser.add_argument("--ai-rag", nargs="?", const="What products do you have?", help="Optional: call /ai/complete/rag with a prompt")
+    parser.add_argument("--ai-multilingual", nargs="?", const="How far, wetin you fit help me with?", help="Optional: call /ai/multilingual with a message")
+    parser.add_argument("--ai-classify", nargs="?", const="I want to place an order", help="Optional: call /ai/classify-intent with a message")
+    parser.add_argument("--ai-capabilities", action="store_true", help="Get AI system capabilities")
+    parser.add_argument("--ai-languages", action="store_true", help="Get supported languages")
     parser.add_argument("--create-product", action="store_true", help="Attempt to create a sample product")
     parser.add_argument("--create-order", action="store_true", help="Attempt to create a sample order for first product")
     parser.add_argument("--create-customer", action="store_true", help="Attempt to create a sample customer")
@@ -158,12 +163,34 @@ def main() -> int:
                     client.get(f"{base}/admin/reports/monthly-audit/latest", headers=headers),
                 )
 
-        # Optional AI completion
+        # AI capabilities and languages (public endpoints)
+        if args.ai_capabilities:
+            p("GET /ai/capabilities:", client.get(f"{base}/ai/capabilities"))
+        
+        if args.ai_languages:
+            p("GET /ai/languages:", client.get(f"{base}/ai/languages"))
+
+        # Optional AI completion (requires auth)
         if args.ai is not None:
             if not os.getenv("GROQ_API_KEY"):
                 print("Skipping /ai/complete: GROQ_API_KEY not set in environment.")
             else:
-                p("POST /ai/complete:", client.post(f"{base}/ai/complete", json={"prompt": args.ai}))
+                p("POST /ai/complete:", client.post(f"{base}/ai/complete", headers=headers, json={"prompt": args.ai}))
+
+        # AI RAG completion (requires auth)
+        if args.ai_rag is not None:
+            if not os.getenv("GROQ_API_KEY"):
+                print("Skipping /ai/complete/rag: GROQ_API_KEY not set in environment.")
+            else:
+                p("POST /ai/complete/rag:", client.post(f"{base}/ai/complete/rag", headers=headers, json={"prompt": args.ai_rag}))
+
+        # AI multilingual processing (requires auth)
+        if args.ai_multilingual is not None:
+            p("POST /ai/multilingual:", client.post(f"{base}/ai/multilingual", headers=headers, json={"message": args.ai_multilingual}))
+
+        # AI intent classification (requires auth)
+        if args.ai_classify is not None:
+            p("POST /ai/classify-intent:", client.post(f"{base}/ai/classify-intent", headers=headers, json={"message": args.ai_classify}))
 
     return 0
 
