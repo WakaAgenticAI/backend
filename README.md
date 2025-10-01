@@ -25,7 +25,7 @@ This README is the source of truth for backend setup and contribution. Additiona
 - **Testing**: pytest + coverage pre-wired via `pyproject.toml`
 - **Environment**: `environment.yaml`/`environment.yml` for conda
 - **Demo**: `api_demo.py` exercises health, auth, CRUD, reports, and AI endpoints
-- **AI**: Groq SDK for `/api/v1/ai/complete` (set `GROQ_API_KEY`)
+- **AI**: Complete agentic AI system with Groq/Ollama LLM, ChromaDB memory, Whisper transcription, multilingual support, and LangGraph orchestration
 - **Tasks**: Celery app scaffold present (`app/celery_app.py`) for future background jobs
 
 ---
@@ -78,11 +78,18 @@ backend/
       orchestrator.py
       inventory_agent.py
       orders_agent.py
-      orders_lookup_agent.py
+      forecasting_agent.py
+      fraud_detection_agent.py
+      crm_agent.py
       __init__.py
     schemas/
       ...
     services/
+      llm_client.py
+      whisper_client.py
+      chroma_client.py
+      multilingual_client.py
+      groq_client.py
       ...
     utils/
       ...
@@ -153,8 +160,9 @@ Key settings (see `app/core/config.py`):
 - `REDIS_URL` (optional; enables Redis manager for realtime)
 - `CORS_ORIGINS`
 - `JWT_SECRET`
-- Optional AI services: `OLLAMA_HOST`, `WHISPER_HOST`
-- Groq AI: `GROQ_API_KEY`, `GROQ_MODEL` (default: `llama3-8b-8192`)
+- AI Services: `GROQ_API_KEY`, `OLLAMA_HOST`, `WHISPER_HOST`
+- ChromaDB: `CHROMA_PERSIST_DIRECTORY` (default: `.chromadb`)
+- Multilingual: Supports Nigerian Pidgin, Hausa, Yoruba, Igbo
 
 ### 4) Initialize the database (Alembic)
 
@@ -173,15 +181,24 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 Docs: http://localhost:8000/api/v1/docs
 
 Health: `GET /api/v1/healthz`  |  Ready: `GET /api/v1/readyz`
-AI: `POST /api/v1/ai/complete` (set `GROQ_API_KEY`)
+
+**AI Endpoints:**
+- `POST /api/v1/ai/complete` — LLM completion with conversation memory
+- `POST /api/v1/ai/complete/stream` — Streaming LLM responses
+- `POST /api/v1/ai/complete/rag` — RAG-enhanced completions
+- `POST /api/v1/ai/transcribe` — Voice transcription (Whisper)
+- `POST /api/v1/ai/multilingual` — Multilingual processing
+- `POST /api/v1/ai/classify-intent` — Intent classification
+- `GET /api/v1/ai/capabilities` — AI system capabilities
+- `GET /api/v1/ai/languages` — Supported languages
 
 ### 6) Try the demo script
 
 ```
 python api_demo.py --base http://localhost:8000/api/v1
 
-# Optionally exercise AI (requires GROQ_API_KEY in environment)
-python api_demo.py --base http://localhost:8000/api/v1 --ai "Summarize WakaAgent in one sentence."
+# Test all AI features (requires GROQ_API_KEY in environment)
+python api_demo.py --base http://localhost:8000/api/v1 --ai-complete --ai-rag --ai-multilingual --ai-classify --ai-capabilities --ai-languages
 ```
 
 The script also supports creating demo products/orders/customers and triggering reports.
@@ -246,6 +263,39 @@ See `docs/frontend-vercel-deploy.md` for a step‑by‑step Vercel guide.
 
 ---
 
+## AI System Architecture
+
+The backend includes a comprehensive agentic AI system with the following components:
+
+### 🤖 **AI Agents**
+- **Orchestrator** — LangGraph-based workflow coordination and intent classification
+- **Orders Agent** — Order management, creation, fulfillment, and payment processing
+- **Inventory Agent** — Stock management, reservations, and low-stock alerts
+- **Forecasting Agent** — AI-powered demand forecasting and reorder point optimization
+- **Fraud Detection Agent** — Transaction scoring and fraud pattern detection
+- **CRM Agent** — Customer relationship management, segmentation, and ticket creation
+
+### 🧠 **AI Services**
+- **LLM Client** — Unified interface for Groq and Ollama providers with conversation memory
+- **Whisper Client** — Voice transcription from URLs, files, or base64 audio data
+- **ChromaDB Client** — Persistent conversation memory with semantic search
+- **Multilingual Client** — Nigerian language support (Pidgin, Hausa, Yoruba, Igbo)
+
+### 🔄 **Workflow Features**
+- **Intent Classification** — Automatic routing of user requests to appropriate agents
+- **Streaming Responses** — Real-time LLM response streaming
+- **RAG (Retrieval Augmented Generation)** — Enhanced responses with knowledge base context
+- **Conversation Memory** — Persistent chat history with semantic search capabilities
+- **Multilingual Processing** — Language detection, translation, and culturally-aware responses
+
+### 🛠 **Integration Points**
+- **Real-time Updates** — Socket.IO integration for live AI responses
+- **Authentication** — JWT-secured AI endpoints
+- **Database Integration** — Direct access to business data for informed responses
+- **Background Processing** — Celery integration for long-running AI tasks
+
+---
+
 ## Modularity & Where to Add Code
 
 - **API routes** → `app/api/v1/endpoints/*.py` and register in `app/api/router.py`
@@ -265,7 +315,16 @@ See `docs/frontend-vercel-deploy.md` for a step‑by‑step Vercel guide.
 - `GET /api/v1/healthz` — liveness check
 - `GET /api/v1/readyz` — readiness
 - `GET /api/v1/demo/testall` — diagnostics
-- `POST /api/v1/ai/complete` — Groq LLM completion
+
+**AI Endpoints:**
+- `POST /api/v1/ai/complete` — LLM completion with conversation memory
+- `POST /api/v1/ai/complete/stream` — Streaming LLM responses
+- `POST /api/v1/ai/complete/rag` — RAG-enhanced completions
+- `POST /api/v1/ai/transcribe` — Voice transcription (Whisper)
+- `POST /api/v1/ai/multilingual` — Multilingual processing
+- `POST /api/v1/ai/classify-intent` — Intent classification
+- `GET /api/v1/ai/capabilities` — AI system capabilities
+- `GET /api/v1/ai/languages` — Supported languages
 - `POST /api/v1/auth/login`, `POST /api/v1/auth/refresh`, `GET /api/v1/auth/me`
 - `GET/POST /api/v1/products`, `GET /api/v1/products/{id}`, etc.
 - `GET/POST /api/v1/customers`, `GET /api/v1/customers/{id}`, etc.
@@ -355,11 +414,23 @@ The frontend derives the WebSocket origin from `NEXT_PUBLIC_API_BASE` automatica
 
 ## Notes & Next Steps
 
-- Add Alembic migrations and initial models per PRD tables.
-- Implement auth refresh flow in frontend using `POST /auth/refresh`.
-- Optionally restrict CORS more tightly per environment.
-- Mount static route for reports (see above) or upload exports to object storage (S3/GCS) and return signed URLs.
-- Expand tests: API contract tests, service unit tests, integration tests.
+### ✅ **Completed**
+- ✅ Complete AI implementation with agentic architecture
+- ✅ All AI endpoints functional with authentication
+- ✅ Frontend integration with real-time AI features
+- ✅ Comprehensive testing suite for AI components
+- ✅ Documentation and deployment guides
+
+### 🔄 **In Progress**
+- Implement auth refresh flow in frontend using `POST /auth/refresh`
+- Mount static route for reports (see above) or upload exports to object storage (S3/GCS) and return signed URLs
+
+### 🚀 **Future Enhancements**
+- Add Alembic migrations and initial models per PRD tables
+- Optionally restrict CORS more tightly per environment
+- Expand tests: API contract tests, service unit tests, integration tests
+- Add more AI agents for specialized business functions
+- Implement advanced RAG with domain-specific knowledge bases
 
 ---
 
