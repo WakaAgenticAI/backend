@@ -163,12 +163,12 @@ def main() -> int:
                     client.get(f"{base}/admin/reports/monthly-audit/latest", headers=headers),
                 )
 
-        # AI capabilities and languages (public endpoints)
+        # AI capabilities and languages (require auth)
         if args.ai_capabilities:
-            p("GET /ai/capabilities:", client.get(f"{base}/ai/capabilities"))
+            p("GET /ai/capabilities:", client.get(f"{base}/ai/capabilities", headers=headers))
         
         if args.ai_languages:
-            p("GET /ai/languages:", client.get(f"{base}/ai/languages"))
+            p("GET /ai/languages:", client.get(f"{base}/ai/languages", headers=headers))
 
         # Optional AI completion (requires auth)
         if args.ai is not None:
