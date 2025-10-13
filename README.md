@@ -436,4 +436,4 @@ The frontend derives the WebSocket origin from `NEXT_PUBLIC_API_BASE` automatica
 
 ## License
 
-Proprietary © WakaAgent AI
+Apache-2.0

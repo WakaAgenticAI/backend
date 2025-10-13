@@ -5,6 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "wakaagent-backend"
 version = "0.1.0"
+license = "Apache-2.0"
 description = "WakaAgent AI Backend (FastAPI modular monolith with agents, realtime, and AI services)"
 authors = [{ name = "WakaAgent Team" }]
 requires-python = ">=3.11"
