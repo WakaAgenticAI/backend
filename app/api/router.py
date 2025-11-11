@@ -14,6 +14,7 @@ def get_api_router() -> APIRouter:
     from app.api.v1.endpoints import customers
     from app.api.v1.endpoints import inventory, tools
     from app.api.v1.endpoints import reports
+    from app.api.v1.endpoints import debts
 
     api_router = APIRouter()
 
@@ -31,5 +32,6 @@ def get_api_router() -> APIRouter:
     api_router.include_router(inventory.router, tags=["inventory"])  # /warehouses, /inventory
     api_router.include_router(tools.router, tags=["tools"])  # /tools/execute
     api_router.include_router(reports.router, tags=["reports"])  # /admin/reports/*, /reports/{id}
+    api_router.include_router(debts.router, tags=["debts"])  # /debts
 
     return api_router

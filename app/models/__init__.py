@@ -12,3 +12,4 @@ from . import inventory  # noqa: F401
 from . import forecasts  # noqa: F401
 from . import audit  # noqa: F401
 from . import auth_tokens  # noqa: F401
+from . import debts  # noqa: F401

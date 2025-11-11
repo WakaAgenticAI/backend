@@ -26,6 +26,7 @@ This README is the source of truth for backend setup and contribution. Additiona
 - **Environment**: `environment.yaml`/`environment.yml` for conda
 - **Demo**: `api_demo.py` exercises health, auth, CRUD, reports, and AI endpoints
 - **AI**: Complete agentic AI system with Groq/Ollama LLM, ChromaDB memory, Whisper transcription, multilingual support, and LangGraph orchestration
+- **Debt Tracking**: Comprehensive receivables/payables management with aging reports, payment tracking, and AI-powered collection insights
 - **Tasks**: Celery app scaffold present (`app/celery_app.py`) for future background jobs
 
 ---
@@ -42,6 +43,7 @@ backend/
           auth.py
           chat.py
           customers.py
+          debts.py
           health.py
           inventory.py
           orders.py
@@ -81,6 +83,7 @@ backend/
       forecasting_agent.py
       fraud_detection_agent.py
       crm_agent.py
+      finance_agent.py
       __init__.py
     schemas/
       ...
@@ -90,6 +93,7 @@ backend/
       chroma_client.py
       multilingual_client.py
       groq_client.py
+      debt_service.py
       ...
     utils/
       ...
@@ -274,6 +278,7 @@ The backend includes a comprehensive agentic AI system with the following compon
 - **Forecasting Agent** — AI-powered demand forecasting and reorder point optimization
 - **Fraud Detection Agent** — Transaction scoring and fraud pattern detection
 - **CRM Agent** — Customer relationship management, segmentation, and ticket creation
+- **Finance Agent** — Debt management, collections, and financial insights
 
 ### 🧠 **AI Services**
 - **LLM Client** — Unified interface for Groq and Ollama providers with conversation memory
@@ -336,6 +341,7 @@ The backend includes a comprehensive agentic AI system with the following compon
 - Chat sessions: `POST /api/v1/chat/sessions`, `GET /api/v1/chat/sessions/{session_id}/messages`, `POST /api/v1/chat/sessions/{session_id}/messages`
 - Reports (admin): `POST /api/v1/admin/reports/daily-sales`, `GET /api/v1/admin/reports/daily-sales/latest`,
   `POST /api/v1/admin/reports/monthly-audit`, `GET /api/v1/admin/reports/monthly-audit/latest`
+- Debts: `GET/POST /api/v1/debts`, `GET /api/v1/debts/{id}`, `PUT /api/v1/debts/{id}`, `POST /api/v1/debts/{id}/payments`, `GET /api/v1/debts/reports/aging`, `GET /api/v1/debts/reports/summary`
 
 ---
 

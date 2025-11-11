@@ -196,7 +196,7 @@ class LangGraphOrchestrator:
             return self._workflows["inventory_flow"]
         elif intent.startswith("customer."):
             return self._workflows["customer_flow"]
-        elif intent.startswith("payment.") or intent.startswith("report."):
+        elif intent.startswith(("payment.", "report.", "debt.")):
             return self._workflows["finance_flow"]
         elif intent.startswith("support."):
             return self._workflows["support_flow"]

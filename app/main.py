@@ -11,6 +11,7 @@ from app.agents.inventory_agent import inventory_agent
 from app.agents.forecasting_agent import forecasting_agent
 from app.agents.fraud_detection_agent import fraud_detection_agent
 from app.agents.crm_agent import crm_agent
+from app.agents.finance_agent import FinanceAgent
 from app.db.session import SessionLocal
 from app.core.security import get_password_hash
 from app.models.users import User
@@ -37,6 +38,7 @@ async def lifespan(app: FastAPI):
     app.state.orchestrator.register_agent(forecasting_agent)
     app.state.orchestrator.register_agent(fraud_detection_agent)
     app.state.orchestrator.register_agent(crm_agent)
+    app.state.orchestrator.register_agent(FinanceAgent())
     # Initialize realtime (Socket.IO) with optional Redis manager
     settings = get_settings()
     app.state.realtime = Realtime(redis_url=settings.REDIS_URL)
