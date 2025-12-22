@@ -1,58 +1,69 @@
-[build-system]
-requires = ["setuptools>=68", "wheel"]
-build-backend = "setuptools.build_meta"
-
-[project]
+[tool.poetry]
 name = "wakaagent-backend"
 version = "0.1.0"
-license = "Apache-2.0"
 description = "WakaAgent AI Backend (FastAPI modular monolith with agents, realtime, and AI services)"
-authors = [{ name = "WakaAgent Team" }]
-requires-python = ">=3.11"
+authors = ["WakaAgent Team"]
+license = "Apache-2.0"
 readme = "README.md"
-keywords = ["fastapi", "ai", "agents", "socket.io", "postgres", "redis", "whisper", "ollama", "chromadb"]
+packages = [{include = "app"}]
 
-# Runtime dependencies (pin minor where reasonable)
-dependencies = [
-  "fastapi>=0.112.0,<0.113.0",
-  "uvicorn[standard]>=0.30.0,<0.31.0",
-  "pydantic>=2.7.0,<3.0.0",
-  "pydantic-settings>=2.3.0,<3.0.0",
-  "python-dotenv>=1.0.1,<2.0.0",
-  "SQLAlchemy>=2.0.30,<3.0.0",
-  "alembic>=1.13.2,<2.0.0",
-  "psycopg[binary]>=3.1.19,<4.0.0",
-  "redis>=5.0.4,<6.0.0",
-  "python-socketio>=5.11.1,<6.0.0",
-  "httpx>=0.27.0,<0.28.0",
-  "python-jose>=3.3.0,<4.0.0",
-  "passlib[bcrypt]>=1.7.4,<2.0.0",
-  "structlog>=24.1.0,<25.0.0",
-  "loguru>=0.7.2,<1.0.0",
-  "tenacity>=8.3.0,<9.0.0",
-  "groq>=0.9.0",
-  "celery>=5.4.0,<6.0.0",
-]
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.112.0"
+uvicorn = {extras = ["standard"], version = "^0.30.0"}
+pydantic = "^2.7.0"
+pydantic-settings = "^2.3.0"
+python-dotenv = "^1.0.1"
+sqlalchemy = "^2.0.30"
+alembic = "^1.13.2"
+psycopg = {extras = ["binary"], version = "^3.1.19"}
+redis = "^5.0.4"
+python-socketio = "^5.11.1"
+httpx = "^0.27.0"
+python-jose = {extras = ["cryptography"], version = "^3.3.0"}
+passlib = {extras = ["bcrypt"], version = "^1.7.4"}
+structlog = "^24.1.0"
+loguru = "^0.7.2"
+tenacity = "^8.3.0"
+groq = "^0.9.0"
+celery = {version = "^5.4.0", optional = true}
+pandas = "^2.3.3"
 
-# Optional: typing + dev tools in optional-dependencies
-[project.optional-dependencies]
-dev = [
-  "pytest>=8.2",
-  "pytest-cov>=5.0",
-  "anyio>=4.0",
-  "ruff>=0.5.0",
-  "black>=24.4",
-  "mypy>=1.10.0"
-]
+# AI/ML dependencies with platform-specific handling
+chromadb = {version = ">=0.4.24", allow-prereleases = true}
+sentence-transformers = {version = "^3.0.0", optional = true}
+torch = {version = "2.2.0", source = "pytorch", optional = true}
+transformers = {version = "^4.37.0", optional = true}
+huggingface-hub = {version = "^0.21.0", optional = true}
+posthog = {version = "^3.2.0", python = ">=3.10"}
+chroma-hnswlib = {version = "0.7.6", allow-prereleases = true}
 
-[project.scripts]
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.2.0"
+pytest-cov = "^5.0.0"
+anyio = "^4.0.0"
+ruff = "^0.5.0"
+black = "^24.4.0"
+mypy = "^1.10.0"
+
+[tool.poetry.scripts]
 waka-backend = "app.main:run"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+# Platform-specific package sources
+[[tool.poetry.source]]
+name = "pytorch"
+url = "https://download.pytorch.org/whl/cpu"
+priority = "explicit"
 
 [tool.pytest.ini_options]
 addopts = "-q --cov=app --cov-report=term-missing"
 testpaths = ["tests"]
 filterwarnings = [
-  "ignore::DeprecationWarning"
+    "ignore::DeprecationWarning"
 ]
 
 [tool.coverage.run]
@@ -70,9 +81,3 @@ line-length = 100
 python_version = "3.11"
 warn_unused_configs = true
 ignore_missing_imports = true
-
-[tool.setuptools]
-package-dir = {"" = "."}
-
-[tool.setuptools.packages.find]
-include = ["app*"]
