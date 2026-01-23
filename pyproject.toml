@@ -11,7 +11,7 @@ packages = [{include = "app"}]
 python = "^3.11"
 fastapi = "^0.112.0"
 uvicorn = {extras = ["standard"], version = "^0.30.0"}
-pydantic = "^2.7.0"
+pydantic = {extras = ["email"], version = "^2.7.0"}
 pydantic-settings = "^2.3.0"
 python-dotenv = "^1.0.1"
 sqlalchemy = "^2.0.30"

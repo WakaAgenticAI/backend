@@ -1,5 +1,5 @@
 from __future__ import annotations
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Response
 from sqlalchemy.orm import Session
 from typing import List, Optional
 
@@ -82,12 +82,13 @@ def update_debt_endpoint(debt_id: int, body: DebtUpdate, db: Session = Depends(g
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
-@router.delete("/debts/{debt_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_roles("Admin"))])
-def delete_debt_endpoint(debt_id: int, db: Session = Depends(get_db)) -> None:
+@router.delete("/debts/{debt_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_roles("Admin"))], response_class=Response)
+def delete_debt_endpoint(debt_id: int, db: Session = Depends(get_db)):
     """Delete a debt record (Admin only)."""
     try:
         delete_debt(db, debt_id)
         audit_log(action="delete", entity="debt", entity_id=debt_id)
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
     except DebtNotFound:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Debt not found")
 
