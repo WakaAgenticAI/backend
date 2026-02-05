@@ -20,6 +20,7 @@ class AICompleteIn(BaseModel):
     max_tokens: int = 512
     session_id: Optional[int] = None
     stream: bool = False
+    language: Optional[str] = None
 
 
 class AICompleteOut(BaseModel):
@@ -91,7 +92,8 @@ async def ai_complete(
             system=payload.system,
             session_id=payload.session_id,
             temperature=payload.temperature,
-            max_tokens=payload.max_tokens
+            max_tokens=payload.max_tokens,
+            target_language=payload.language
         )
         
         return AICompleteOut(
@@ -115,16 +117,29 @@ async def ai_complete_stream(
         
         async def generate():
             try:
-                async for chunk in await llm_client.complete(
+                result = await llm_client.complete(
                     prompt=payload.prompt,
                     system=payload.system,
                     session_id=payload.session_id,
                     temperature=payload.temperature,
                     max_tokens=payload.max_tokens,
-                    stream=True
-                ):
+                    stream=True,
+                    target_language=payload.language
+                )
+                
+                # Check if result is an async generator or a string
+                if hasattr(result, '__aiter__'):
+                    # It's an async generator, stream it
+                    async for chunk in result:
+                        response_data = AICompleteStreamOut(
+                            content=chunk,
+                            done=False
+                        )
+                        yield f"data: {response_data.model_dump_json()}\n\n"
+                else:
+                    # It's a string, send it as a single chunk
                     response_data = AICompleteStreamOut(
-                        content=chunk,
+                        content=result,
                         done=False
                     )
                     yield f"data: {response_data.model_dump_json()}\n\n"

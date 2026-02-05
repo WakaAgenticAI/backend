@@ -82,3 +82,45 @@ def get_latest_monthly_audit(
     if not row:
         raise HTTPException(status_code=404, detail="No monthly audit report yet")
     return dict(row)
+
+
+@router.get("/admin/reports/sales", tags=["reports"])
+def get_sales_report(
+    period: str,
+    db: Session = Depends(get_db),
+    _user=Depends(require_roles("Admin", "Finance")),
+) -> dict[str, Any]:
+    """
+    Get sales report for a specific period (YYYY-MM format).
+    Returns report data or triggers async generation if not available.
+    """
+    # Validate period format
+    try:
+        datetime.strptime(period + "-01", "%Y-%m-%d")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="period must be YYYY-MM format")
+    
+    # Check if report exists for this period
+    row = db.execute(
+        text("SELECT * FROM reports WHERE type='daily_sales' AND params LIKE :period ORDER BY created_at DESC LIMIT 1"),
+        {"period": f"%{period}%"}
+    ).mappings().first()
+    
+    if row:
+        return {
+            "status": "completed",
+            "report_id": row["id"],
+            "period": period,
+            "file_url": row.get("file_url"),
+            "insights": row.get("insights_json"),
+            "created_at": row["created_at"].isoformat() if row.get("created_at") else None
+        }
+    
+    # If no report exists, trigger async generation
+    async_result = task_build_daily_sales.delay(period)
+    return {
+        "status": "processing",
+        "task_id": async_result.id,
+        "period": period,
+        "message": f"Report generation started for period {period}"
+    }

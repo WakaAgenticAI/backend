@@ -39,7 +39,7 @@ def get_collection(name: str):
         # If we get here, the collection exists
         print(f"Using existing collection: {name}")
         return coll
-    except ValueError:
+    except (ValueError, chromadb.errors.NotFoundError):
         # Collection doesn't exist, create it with our embedder
         print(f"Creating new collection: {name}")
         coll = client.get_or_create_collection(

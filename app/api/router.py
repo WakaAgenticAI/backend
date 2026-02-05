@@ -15,6 +15,7 @@ def get_api_router() -> APIRouter:
     from app.api.v1.endpoints import inventory, tools
     from app.api.v1.endpoints import reports
     from app.api.v1.endpoints import debts
+    from app.api.v1.endpoints import forecasts
 
     api_router = APIRouter()
 
@@ -23,7 +24,7 @@ def get_api_router() -> APIRouter:
     api_router.include_router(testall.router, prefix="/demo", tags=["demo"])  # /demo/testall
     api_router.include_router(ai.router, prefix="/ai", tags=["ai"])  # /ai/complete
     api_router.include_router(orders.router, tags=["orders"])  # /orders
-    api_router.include_router(chat.router, tags=["chat"])  # /chat/route
+    api_router.include_router(chat.router, prefix="/chat", tags=["chat"])  # /chat/route
     if auth is not None:
         api_router.include_router(auth.router, tags=["auth"])  # /auth/login, /auth/refresh
     api_router.include_router(products.router, tags=["products"])  # /products
@@ -33,5 +34,6 @@ def get_api_router() -> APIRouter:
     api_router.include_router(tools.router, tags=["tools"])  # /tools/execute
     api_router.include_router(reports.router, tags=["reports"])  # /admin/reports/*, /reports/{id}
     api_router.include_router(debts.router, tags=["debts"])  # /debts
+    api_router.include_router(forecasts.router, tags=["forecasts"])  # /forecasts
 
     return api_router
