@@ -40,5 +40,19 @@ htmlcov/
 backendPRD.md
 WakaAgent AI.pdf
 
+# ChromaDB
+.chromadb/
+
+# SQLite databases
+*.db
+*.sqlite3
+
+# Node.js (for test scripts)
+node_modules/
+package-lock.json
+
+# Test files
+test_*.js
+
 # Alembic versions (uncomment if generated later)
 # alembic/versions/
