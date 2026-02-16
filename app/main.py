@@ -20,7 +20,13 @@ from app.core.logging import setup_json_logging
 from app.realtime.server import Realtime
 from app.models.inventory import Warehouse, Inventory
 from app.models.products import Product
-from app.core.middleware import RequestIDMiddleware, SimpleRateLimitMiddleware
+from app.core.middleware import (
+    RequestIDMiddleware,
+    SimpleRateLimitMiddleware,
+    SecurityHeadersMiddleware,
+    InputSanitizationMiddleware,
+    LoginRateLimitMiddleware,
+)
 from app.core.app_state import set_app
 
 
@@ -124,26 +130,31 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     settings = get_settings()
 
+    # Disable docs in production for security
+    is_prod = settings.APP_ENV == "prod"
     app = FastAPI(
         title=settings.APP_NAME,
         version="0.1.0",
         lifespan=lifespan,
-        docs_url=f"{settings.API_V1_PREFIX}/docs",
-        openapi_url=f"{settings.API_V1_PREFIX}/openapi.json",
+        docs_url=None if is_prod else f"{settings.API_V1_PREFIX}/docs",
+        openapi_url=None if is_prod else f"{settings.API_V1_PREFIX}/openapi.json",
     )
 
-    # CORS
+    # CORS — explicit origins, no wildcard in production
     origins = [o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip()]
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=origins or ["*"],
+        allow_origins=origins or (["*"] if not is_prod else []),
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
     )
 
-    # Middlewares
+    # Security middleware stack (order matters: outermost runs first)
+    app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(RequestIDMiddleware)
+    app.add_middleware(InputSanitizationMiddleware, max_body_mb=settings.MAX_REQUEST_SIZE_MB)
+    app.add_middleware(LoginRateLimitMiddleware, max_attempts=settings.MAX_LOGIN_ATTEMPTS, window_seconds=settings.LOGIN_LOCKOUT_MINUTES * 60)
     app.add_middleware(SimpleRateLimitMiddleware, max_requests=100, window_seconds=60)
 
     # Routes

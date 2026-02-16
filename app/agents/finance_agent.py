@@ -4,7 +4,7 @@ from decimal import Decimal
 
 from sqlalchemy.orm import Session
 
-from app.agents.orchestrator import Agent
+from app.agents.orchestrator import Agent, AgentState
 from app.db.session import SessionLocal
 from app.services.debt_service import (
     list_debts, get_debt_summary, get_debt_aging_report,
@@ -13,7 +13,7 @@ from app.services.debt_service import (
 from app.schemas.debts import DebtOut, DebtSummary, DebtAgingReport
 
 
-class FinanceAgent(Agent):
+class FinanceAgent:
     name = "finance"
     description = "Handles financial operations including debt management, reports, and collections"
     tools = ["debt.list_overdue", "debt.generate_collection_plan", "debt.aging_report", "debt.summary"]
@@ -21,19 +21,24 @@ class FinanceAgent(Agent):
     async def can_handle(self, intent: str, payload: dict) -> bool:
         return intent.startswith("debt.") or intent in ["payment.process", "payment.refund", "report.generate"]
 
-    async def handle(self, intent: str, payload: dict) -> dict:
+    async def handle(self, state: AgentState) -> AgentState:
+        intent = state["intent"]
+        payload = state["payload"]
         db: Session = SessionLocal()
         try:
             if intent == "debt.list_overdue":
-                return await self._list_overdue_debts(db, payload)
+                result = await self._list_overdue_debts(db, payload)
             elif intent == "debt.generate_collection_plan":
-                return await self._generate_collection_plan(db, payload)
+                result = await self._generate_collection_plan(db, payload)
             elif intent == "debt.aging_report":
-                return await self._get_aging_report(db, payload)
+                result = await self._get_aging_report(db, payload)
             elif intent == "debt.summary":
-                return await self._get_debt_summary(db, payload)
+                result = await self._get_debt_summary(db, payload)
             else:
-                return {"handled": False, "reason": "unknown_intent"}
+                result = {"handled": False, "reason": "unknown_intent"}
+            return {**state, "result": result.get("result", result), "error": result.get("reason")}
+        except Exception as e:
+            return {**state, "error": str(e)}
         finally:
             db.close()
 

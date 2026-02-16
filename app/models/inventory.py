@@ -20,3 +20,4 @@ class Inventory(Base):
     warehouse_id: Mapped[int] = mapped_column(Integer, ForeignKey("warehouses.id", ondelete="CASCADE"), index=True)
     on_hand: Mapped[float] = mapped_column(Numeric(12, 2), default=0)
     reserved: Mapped[float] = mapped_column(Numeric(12, 2), default=0)
+    reorder_point: Mapped[float] = mapped_column(Numeric(12, 2), default=0)

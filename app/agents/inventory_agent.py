@@ -293,6 +293,14 @@ class InventoryAgent:
                         "status": "critical" if on_hand == 0 else "low"
                     })
             
+            # Send email alert if critical items found
+            if low_stock_items:
+                try:
+                    from app.services.email_service import get_email_service
+                    await get_email_service().alert_low_stock(low_stock_items)
+                except Exception:
+                    pass  # never fail the agent on notification errors
+
             return {
                 "success": True,
                 "low_stock_items": low_stock_items,

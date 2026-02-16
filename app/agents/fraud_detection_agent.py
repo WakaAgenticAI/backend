@@ -160,9 +160,30 @@ class FraudDetectionAgent:
             # Generate AI explanation
             explanation = await self._generate_risk_explanation(risk_scores, triggered_rules, overall_score)
             
+            result_order_id = order.id if hasattr(order, 'id') else order_id
+            result_amount = float(order.total) if hasattr(order, 'total') else None
+            customer_name = None
+            if hasattr(order, 'customer') and order.customer:
+                customer_name = getattr(order.customer, 'name', None) or getattr(order.customer, 'full_name', None)
+
+            # Send email alert for medium/high risk
+            if risk_level in ("medium", "high"):
+                try:
+                    from app.services.email_service import get_email_service
+                    await get_email_service().alert_fraud_detected(
+                        order_id=result_order_id,
+                        risk_score=overall_score,
+                        risk_level=risk_level,
+                        factors=triggered_rules,
+                        customer_name=customer_name,
+                        amount=result_amount,
+                    )
+                except Exception:
+                    pass  # never fail the agent on notification errors
+
             return {
                 "success": True,
-                "order_id": order.id if hasattr(order, 'id') else order_id,
+                "order_id": result_order_id,
                 "risk_level": risk_level,
                 "overall_score": round(overall_score, 3),
                 "risk_scores": {k: round(v, 3) for k, v in risk_scores.items()},

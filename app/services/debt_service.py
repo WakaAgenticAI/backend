@@ -276,4 +276,28 @@ def update_overdue_statuses(db: Session) -> int:
         debt.updated_at = datetime.utcnow()
 
     db.commit()
+
+    # Send email alert for newly overdue debts
+    if overdue_debts:
+        try:
+            import asyncio
+            from app.services.email_service import get_email_service
+            debt_dicts = [
+                {
+                    "id": d.id,
+                    "type": d.type,
+                    "entity_type": d.entity_type,
+                    "amount_ngn": str(d.amount_ngn),
+                    "due_date": str(d.due_date) if d.due_date else "N/A",
+                }
+                for d in overdue_debts
+            ]
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(get_email_service().alert_overdue_debts(debt_dicts))
+            except RuntimeError:
+                asyncio.run(get_email_service().alert_overdue_debts(debt_dicts))
+        except Exception:
+            pass  # never fail the service on notification errors
+
     return len(overdue_debts)

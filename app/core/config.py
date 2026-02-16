@@ -1,6 +1,6 @@
 from functools import lru_cache
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import Optional
+from typing import Optional, List
 
 
 class Settings(BaseSettings):
@@ -16,11 +16,17 @@ class Settings(BaseSettings):
     # Security
     JWT_SECRET: str = "change-me"
     JWT_ALG: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
-    REFRESH_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60  # 1 hour (was 15 min)
+    REFRESH_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
+    MAX_LOGIN_ATTEMPTS: int = 5
+    LOGIN_LOCKOUT_MINUTES: int = 15
 
     # CORS
-    CORS_ORIGINS: str = "*"
+    CORS_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000"
+
+    # Security headers
+    TRUSTED_HOSTS: str = "localhost,127.0.0.1"
+    MAX_REQUEST_SIZE_MB: int = 10
 
     # DB & Infra
     DATABASE_URL: str = "postgresql+psycopg://user:pass@localhost:5432/waka"
@@ -43,6 +49,12 @@ class Settings(BaseSettings):
     # External tools directory (kept at repo root by default)
     # If unset, backend will attempt to resolve '../../tools' relative to this file.
     TOOLS_DIR: Optional[str] = None
+
+    # Email notifications (Resend — free tier: 100 emails/day)
+    RESEND_API_KEY: Optional[str] = None
+    ALERT_EMAIL_FROM: str = "WakaAgent AI <alerts@resend.dev>"
+    ALERT_EMAIL_TO: str = ""  # comma-separated list of admin emails
+    EMAIL_NOTIFICATIONS_ENABLED: bool = True
 
     # Render (MCP) integration
     RENDER_API_KEY: Optional[str] = None

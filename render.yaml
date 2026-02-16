@@ -23,4 +23,12 @@ services:
         sync: false
       - key: APP_ENV
         value: prod
+      - key: RESEND_API_KEY
+        sync: false
+      - key: ALERT_EMAIL_FROM
+        value: "WakaAgent AI <alerts@resend.dev>"
+      - key: ALERT_EMAIL_TO
+        sync: false
+      - key: EMAIL_NOTIFICATIONS_ENABLED
+        value: "true"
     postDeployCommand: alembic upgrade head

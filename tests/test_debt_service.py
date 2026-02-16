@@ -3,8 +3,23 @@ import pytest
 from decimal import Decimal
 from datetime import date
 
+from sqlalchemy import inspect
+
 from app.services.debt_service import create_debt, get_debt, DebtNotFound
 from app.schemas.debts import DebtIn
+from app.db.session import SessionLocal, _engine as engine
+from app.models.debts import Debt, DebtPayment
+from app.models.base import Base
+
+
+@pytest.fixture(autouse=True, scope="module")
+def _ensure_debt_tables():
+    """Create debts/debt_payments tables if they don't exist."""
+    inspector = inspect(engine)
+    existing = inspector.get_table_names()
+    if "debts" not in existing or "debt_payments" not in existing:
+        Debt.__table__.create(engine, checkfirst=True)
+        DebtPayment.__table__.create(engine, checkfirst=True)
 
 
 def test_create_debt(db_session):
