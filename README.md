@@ -99,6 +99,12 @@ cp .env_example .env
 | `ALERT_EMAIL_TO` | No | — | Recipient email for alerts |
 | `EMAIL_NOTIFICATIONS_ENABLED` | No | `true` | Toggle email notifications on/off |
 | `REPORTS_EXPORT_DIR` | No | `exports` | Directory for generated report files |
+| `AI_REPORTS_ENABLED` | No | `true` | Enable AI-powered report insights |
+| `SENTRY_DSN` | No | — | Sentry error tracking DSN |
+| `LOG_LEVEL` | No | `INFO` | Logging level (DEBUG, INFO, WARNING, ERROR) |
+| `RATE_LIMIT_ENABLED` | No | `true` | Enable rate limiting middleware |
+| `RATE_LIMIT_REQUESTS` | No | `100` | Max requests per window per IP |
+| `RATE_LIMIT_WINDOW` | No | `60` | Rate limit window in seconds |
 
 ---
 
@@ -297,6 +303,11 @@ mypy app
 | POST | `/api/v1/notifications/alert/*` | Yes | Trigger specific alerts |
 | GET | `/api/v1/roles` | Yes | List roles |
 | POST | `/api/v1/tools/execute` | Yes | Execute agent tools |
+| POST | `/api/v1/admin/reports/daily-sales` | Yes | Trigger daily sales report |
+| POST | `/api/v1/admin/reports/monthly-audit` | Yes | Trigger monthly audit report |
+| GET | `/api/v1/admin/reports/daily-sales/latest` | Yes | Get latest daily sales report |
+| GET | `/api/v1/admin/reports/monthly-audit/latest` | Yes | Get latest monthly audit report |
+| GET | `/api/v1/admin/reports/sales` | Yes | Get sales report for period |
 
 Full interactive docs: `http://localhost:8000/api/v1/docs`
 
@@ -378,6 +389,91 @@ backend/
 | Pydantic schema | `app/schemas/` |
 | Background job | `app/jobs/` |
 | Realtime event | `app/realtime/emitter.py` |
+
+---
+
+## Security & Production Hardening
+
+### JWT Security (Recommended for Production)
+
+**Current Implementation**: JWT stored in `localStorage` (XSS vulnerable)
+**Production Recommendation**: HttpOnly cookies
+
+```python
+# For production deployment, consider using HttpOnly cookies:
+# 1. Set secure cookies: response.set_cookie("access_token", token, httponly=True, secure=True, samesite="strict")
+# 2. Update frontend to read from cookies instead of localStorage
+# 3. Configure CORS with credentials: true
+```
+
+### Rate Limiting
+
+The app includes built-in rate limiting middleware:
+
+| Middleware | Purpose | Default Limits |
+|------------|---------|---------------|
+| `LoginRateLimitMiddleware` | Brute-force protection on `/auth/login` | 5 attempts per 15 min per IP |
+| `SimpleRateLimitMiddleware` | General API rate limiting | 100 requests per minute per IP |
+
+**Configuration**:
+```bash
+# Enable/disable in .env
+RATE_LIMIT_ENABLED=true
+RATE_LIMIT_REQUESTS=100
+RATE_LIMIT_WINDOW=60
+```
+
+**Note**: For multi-process deployments, use Redis-backed rate limiting instead of in-memory.
+
+### Role-Based Access Control (RBAC)
+
+The system has 6 predefined roles with specific permissions:
+
+| Role | Permissions | Description |
+|------|-------------|-------------|
+| **Admin** | Full access | Can access all endpoints, including admin reports and user management |
+| **Sales** | Orders, Customers, Products | Create/update orders, manage customers, view products |
+| **Ops** | Orders, Inventory, Warehouses | Fulfill orders, adjust inventory, manage warehouses |
+| **Finance** | Orders, Debts, Reports | View orders, manage debts, access financial reports |
+| **Sales Representative** | Orders, Customers (read-only) | Create orders, view customer data (limited) |
+| **Stock Keeper** | Inventory, Products (read-only) | Adjust stock levels, view product information |
+
+**Endpoint Protection**:
+- Most endpoints require `require_roles("Admin", "Sales", ...)` decorator
+- Admin-only endpoints: `/admin/reports/*`, user management
+- Finance endpoints: `/debts/*`, financial reports
+
+### Monitoring & Observability
+
+#### Error Tracking (Sentry)
+```bash
+# Add to .env for production error tracking
+SENTRY_DSN=https://your-sentry-dsn@sentry.io/project-id
+LOG_LEVEL=INFO  # or DEBUG for development
+```
+
+#### Logging Configuration
+- Structured logging with request IDs via `RequestIDMiddleware`
+- Security events logged to "security" logger
+- Audit trails for critical actions (report generation, auth events)
+- Performance monitoring can be added via middleware
+
+#### Health Checks
+- `/api/v1/healthz` - Basic health check
+- Consider adding: `/api/v1/healthz/detailed` with DB, Redis, external service status
+
+### Production Deployment Checklist
+
+- [ ] Use PostgreSQL instead of SQLite
+- [ ] Set strong `JWT_SECRET` (32+ random chars)
+- [ ] Configure `CORS_ORIGINS` with production frontend URL
+- [ ] Enable HttpOnly cookies for JWT (modify auth endpoints)
+- [ ] Set up Sentry for error tracking
+- [ ] Configure Redis for rate limiting (multi-process)
+- [ ] Use environment-specific `APP_ENV=prod`
+- [ ] Set up backup strategy for database
+- [ ] Monitor free tier limits on Render (spin-down behavior)
+- [ ] Configure proper SSL certificates (handled by Render)
 
 ---
 
