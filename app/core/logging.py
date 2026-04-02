@@ -4,6 +4,8 @@ import logging
 import sys
 from typing import Any
 
+from app.core.config import get_settings
+
 
 class JsonFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:  # type: ignore[override]
@@ -21,17 +23,27 @@ class JsonFormatter(logging.Formatter):
 
 
 def setup_json_logging() -> None:
+    settings = get_settings()
+    
     root = logging.getLogger()
     if root.handlers:
         # Avoid double init in reload
         for h in list(root.handlers):
             root.removeHandler(h)
-    root.setLevel(logging.INFO)
+    
+    # Set log level from environment
+    log_level = getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO)
+    root.setLevel(log_level)
 
     handler = logging.StreamHandler(stream=sys.stdout)
     handler.setFormatter(JsonFormatter())
+    handler.setLevel(log_level)
     root.addHandler(handler)
 
     # Dedicated audit logger inherits handlers
     audit_logger = logging.getLogger("audit")
     audit_logger.setLevel(logging.INFO)
+    
+    # Security logger for rate limiting and security events
+    security_logger = logging.getLogger("security")
+    security_logger.setLevel(logging.WARNING)

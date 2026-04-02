@@ -29,6 +29,7 @@ groq = "^0.9.0"
 celery = {version = "^5.4.0", optional = true}
 pandas = "^2.3.3"
 aiofiles = "^24.1.0"
+sentry-sdk = {extras = ["fastapi"], version = "^2.0.0"}
 
 # AI/ML dependencies with platform-specific handling
 chromadb = {version = ">=0.4.24", allow-prereleases = true}

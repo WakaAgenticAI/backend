@@ -27,6 +27,7 @@ from app.core.middleware import (
     InputSanitizationMiddleware,
     LoginRateLimitMiddleware,
 )
+from app.core.sentry import init_sentry
 from app.core.app_state import set_app
 
 
@@ -34,6 +35,7 @@ from app.core.app_state import set_app
 async def lifespan(app: FastAPI):
     # Startup
     setup_json_logging()
+    init_sentry()  # Initialize error tracking
     # Expose app globally for subsystems (realtime emitters, etc.)
     set_app(app)
     # Initialize orchestrator and register domain agents
@@ -155,7 +157,10 @@ def create_app() -> FastAPI:
     app.add_middleware(RequestIDMiddleware)
     app.add_middleware(InputSanitizationMiddleware, max_body_mb=settings.MAX_REQUEST_SIZE_MB)
     app.add_middleware(LoginRateLimitMiddleware, max_attempts=settings.MAX_LOGIN_ATTEMPTS, window_seconds=settings.LOGIN_LOCKOUT_MINUTES * 60)
-    app.add_middleware(SimpleRateLimitMiddleware, max_requests=100, window_seconds=60)
+    
+    # Only add rate limiting if enabled
+    if settings.RATE_LIMIT_ENABLED:
+        app.add_middleware(SimpleRateLimitMiddleware, max_requests=settings.RATE_LIMIT_REQUESTS, window_seconds=settings.RATE_LIMIT_WINDOW)
 
     # Routes
     app.include_router(get_api_router(), prefix=settings.API_V1_PREFIX)
