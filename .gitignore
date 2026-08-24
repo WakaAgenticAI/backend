@@ -1,58 +1,6 @@
-# Python
-__pycache__/
-*.py[cod]
-*.pyo
-*.pyd
-*.so
-*.egg-info/
-.eggs/
-dist/
-build/
-
-# Virtual envs
-.venv/
-venv/
+# Supabase
+.branches
+.temp
 .env
 .env.*
-.python-version
-
-# Coverage / Testing
-.coverage*
-htmlcov/
-.pytest_cache/
-
-# Linters / Type checkers
-.mypy_cache/
-.ruff_cache/
-
-# IDE / OS
-.vscode/
-.idea/
-.DS_Store
-
-# Notebooks
-.ipynb_checkpoints/
-
-# Logs
-*.log
-
-# Local data / secrets (adjust as needed)
-backendPRD.md
-WakaAgent AI.pdf
-
-# ChromaDB
-.chromadb/
-
-# SQLite databases
-*.db
-*.sqlite3
-
-# Node.js (for test scripts)
-node_modules/
-package-lock.json
-
-# Test files
-test_*.js
-
-# Alembic versions (uncomment if generated later)
-# alembic/versions/
+!.env.example
